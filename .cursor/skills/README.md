@@ -6,7 +6,8 @@ Reinstall or refresh everything:
 
 ```bash
 ./scripts/install-agent-skills.sh
-./scripts/setup-agent-stack.sh   # OpenSpec, agent-browser CLI, Graphify, MCP template
+./scripts/install-repo-intelligence.sh   # OpenSpec, Graphify
+./scripts/setup-agent-stack.sh           # + agent-browser CLI, MCP template
 ```
 
 One-time repo setup (already done for this fork; re-run after cloning):
@@ -18,6 +19,41 @@ One-time repo setup (already done for this fork; re-run after cloning):
 # Write ~/.cursor/rules/pstack-models.mdc
 /setup-pstack
 ```
+
+---
+
+## 2026 stack additions
+
+Curated tooling and skills added for 2026 agent workflows. **One methodology per task** — do not dump every pack into one session.
+
+| Tool / skill | Install | When to use |
+| --- | --- | --- |
+| **OpenSpec** | `./scripts/install-repo-intelligence.sh` | Spec-driven change proposals under `openspec/` |
+| **Graphify** | same script (`uv tool install graphifyy`) | Code graph / structural navigation in Cursor |
+| **Context7 MCP** | Copy `.cursor/mcp.json.example` → `~/.cursor/mcp.json` or merge locally | Up-to-date library docs via `@upstash/context7-mcp` |
+| **last30days** | `install-agent-skills.sh` | Multi-source recency radar (Reddit, X, HN, GitHub, …) |
+| **deep-research** | `install-agent-skills.sh` | Async Gemini-grounded deep research (one pack only) |
+| **hallmark** | `install-agent-skills.sh` | UI taste gate — anti-AI-slop audit and greenfield design |
+| **wshobson specialists** | `install-agent-skills.sh` (16 skills) | Backend, Python, JS/TS, security, architecture, code-review subsets — **not** the full 181-skill pack |
+
+**Optional (not installed by default):**
+
+| Tool | Notes |
+| --- | --- |
+| **Serena** | Semantic/LSP-style code intelligence — [oraios/serena](https://github.com/oraios/serena); install locally if needed |
+| **impeccable** | Heavy UI polish pack — evaluate manually if desired |
+| **remotion-dev/skills** | Buzz is Rust/React/Tauri — not Remotion video |
+
+**wshobson plugin → installed skills mapping:**
+
+| Plugin domain | Installed skills |
+| --- | --- |
+| `backend-development` | `api-design-principles`, `architecture-patterns`, `microservices-patterns`, `rust-async-patterns` |
+| `python-development` | `python-testing-patterns`, `python-type-safety` |
+| `javascript-typescript` | `modern-javascript-patterns`, `typescript-advanced-types`, `nodejs-backend-patterns` |
+| `security` | `sast-configuration`, `stride-analysis-patterns` |
+| `architecture-review` | `architecture-decision-records`, `postgresql-table-design`, `sql-optimization-patterns` |
+| `code-review` | `code-review-excellence`, `e2e-testing-patterns`, `debugging-strategies` |
 
 ---
 
@@ -107,18 +143,20 @@ discover → interrogate/spec → plan → implement → review → security →
 | **mvanhorn/last30days-skill** | 1 | `last30days` — multi-source trend research (Reddit, X, HN, GitHub, …) |
 | **24601/agent-deep-research** | 1 | `deep-research` — async Gemini-grounded deep research |
 | **nutlope/hallmark** | 1 | `hallmark` — anti-AI-slop UI audit and greenfield design |
-| **wshobson/agents** | 8 | Curated backend/testing subset only (not full 181-skill pack) |
+| **wshobson/agents** | 16 | Curated plugin-domain subset (backend, Python, JS/TS, security, architecture, review) |
 
 Buzz-native (`.agents/skills/`): `desktop-screenshot`, `sprout-cli`.
 
-**Repo-level tools** (`./scripts/setup-agent-stack.sh`):
+**Repo-level tools** (`./scripts/install-repo-intelligence.sh`):
 
 | Tool | Purpose |
 | --- | --- |
 | OpenSpec (`@fission-ai/openspec`) | Spec-driven change proposals (`openspec/` in repo) |
-| agent-browser CLI | Live Playwright automation (pairs with `agent-browser` skill) |
-| Graphify (`graphifyy`) | Code graph when `uv` + `graphify install --project` succeed |
-| Context7 MCP | Copy `.cursor/mcp.json.example` → `.cursor/mcp.json`; set `CONTEXT7_API_KEY` locally |
+| Graphify (`graphifyy`) | Code graph when `uv` + `graphify install --project --platform cursor` succeed |
+| Context7 MCP | Copy `.cursor/mcp.json.example` → `~/.cursor/mcp.json` or merge locally; set `CONTEXT7_API_KEY` if using the hosted endpoint |
+| Serena (optional) | Semantic code intelligence — not installed by default |
+
+**Agent-browser CLI** (`./scripts/setup-agent-stack.sh`): live Playwright automation (pairs with `agent-browser` skill).
 | OpenSpec | `openspec/` + `openspec-*` skills and `/opsx-*` Cursor commands |
 | Graphify | `graphify` skill + `graphify-out/` (gitignored generated graph) |
 
@@ -133,7 +171,8 @@ Buzz-native (`.agents/skills/`): `desktop-screenshot`, `sprout-cli`.
 | Full `awesome-copilot` | 417 skills — context rot; 13-skill curated subset installed |
 | Full `anthropics/skills` | Creative/enterprise subset excluded |
 | `remotion-dev/skills` | Buzz is Rust/React/Tauri — not Remotion video |
-| `wshobson/agents` (remainder) | 173 skills excluded — 8-skill curated subset installed |
+| `wshobson/agents` (remainder) | 165 skills excluded — 16-skill curated subset installed |
+| `impeccable` | Heavy optional pack — evaluate manually; see [2026 stack additions](#2026-stack-additions) |
 | `heilcheng/awesome-agent-skills` | Index only — see [More credible collections](#more-credible-collections) |
 | ECC + all methodologies active simultaneously | Pick **one** execution layer per task (`/poteto-mode`, superpowers, or `ce-work`) |
 | NVIDIA agent skills | Not Buzz stack |

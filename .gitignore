@@ -77,7 +77,10 @@ doc/
 identity.key
 **/identity.key
 
-# Claude Code worktrees
+# Claude Code harness (Cursor uses .cursor/; OpenSpec/Graphify may write here locally)
+.claude/
+
+# Claude Code worktrees (redundant when .claude/ is ignored; kept for clarity)
 .claude/worktrees/
 
 # Stray directories created by `npx skills add` when --agent is broad

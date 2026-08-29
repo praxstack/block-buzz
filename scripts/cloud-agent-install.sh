@@ -35,10 +35,13 @@ echo "[cloud-agent-install] Installing Playwright Chromium for desktop screensho
 echo "[cloud-agent-install] Installing git hooks..."
 just hooks
 
-echo "[cloud-agent-install] Installing gstack Cursor skills (project-level)..."
-"${REPO_ROOT}/scripts/install-gstack-skills.sh"
+echo "[cloud-agent-install] Installing curated agent skills (includes gstack)..."
+"${REPO_ROOT}/scripts/install-agent-skills.sh"
 
-echo "[cloud-agent-install] Installing repo-level agent tools (OpenSpec, agent-browser, Graphify)..."
+echo "[cloud-agent-install] Installing repo intelligence (OpenSpec, Graphify)..."
+"${REPO_ROOT}/scripts/install-repo-intelligence.sh"
+
+echo "[cloud-agent-install] Installing agent-browser CLI..."
 "${REPO_ROOT}/scripts/setup-agent-stack.sh"
 
 echo "[cloud-agent-install] Done."

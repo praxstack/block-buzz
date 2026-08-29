@@ -244,6 +244,8 @@ A Rust workspace of focused crates. Single source of truth: the relay. See [ARCH
 - **[VISION.md](VISION.md)** · **[VISION_SOVEREIGN.md](VISION_SOVEREIGN.md)** · **[VISION_PROJECTS.md](VISION_PROJECTS.md)** · **[VISION_AGENT.md](VISION_AGENT.md)** — the four vision docs
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — system design, kind ranges, subsystem boundaries
 - **[TESTING.md](TESTING.md)** — multi-agent E2E test suite
+- **[.cursor/skills/README.md](.cursor/skills/README.md)** — curated Cursor agent skills (`./scripts/install-agent-skills.sh`)
+- **Context7 MCP** — copy [`.cursor/mcp.json.example`](.cursor/mcp.json.example) to `~/.cursor/mcp.json` (or merge into a local `.cursor/mcp.json`); set `CONTEXT7_API_KEY` if using the hosted endpoint
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** · **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** · **[SECURITY.md](SECURITY.md)** · **[GOVERNANCE.md](GOVERNANCE.md)**
 
 <details>

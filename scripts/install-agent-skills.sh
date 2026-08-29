@@ -69,12 +69,19 @@ install_skillpack mvanhorn/last30days-skill --skill last30days
 install_skillpack 24601/agent-deep-research --skill deep-research
 install_skillpack nutlope/hallmark --skill hallmark
 
-# wshobson/agents — backend/security/testing subset only (not full 181-skill pack)
+# wshobson/agents — selective by plugin domain (not full 181-skill / 94-plugin pack).
+# Maps: backend-development, python-development, javascript-typescript, security,
+# architecture-review, code-review — install individual skills via --skill.
 install_skillpack wshobson/agents \
   --skill api-design-principles --skill architecture-patterns \
-  --skill postgresql-table-design --skill rust-async-patterns \
-  --skill sql-optimization-patterns --skill e2e-testing-patterns \
-  --skill debugging-strategies --skill code-review-excellence
+  --skill microservices-patterns --skill rust-async-patterns \
+  --skill postgresql-table-design --skill sql-optimization-patterns \
+  --skill python-testing-patterns --skill python-type-safety \
+  --skill modern-javascript-patterns --skill typescript-advanced-types \
+  --skill nodejs-backend-patterns \
+  --skill sast-configuration --skill stride-analysis-patterns \
+  --skill architecture-decision-records --skill code-review-excellence \
+  --skill e2e-testing-patterns --skill debugging-strategies
 
 # remotion-dev/skills skipped — Buzz is Rust/React/Tauri desktop, not Remotion video
 
@@ -120,7 +127,7 @@ done
 echo "[install-agent-skills] Cleaning stray agent directories from skills CLI..."
 for d in .adal .aider-desk .augment .autohand .bob .codeartsdoer .codebuddy \
   .codemaker .codestudio .commandcode .continue .cortex .crush .devin .factory \
-  .forge .grok .hermes .iflow .inferencesh .intersect .jazz .junie .kilocode \
+  .forge .grok .hermes .iflow .inferencesh .jazz .junie .kilocode \
   .kimchi .kiro .kode .lingma .mcpjam .minimax .moxby .mux .neovate .ona \
   .openhands .pi .pochi .posit .qoder .qwen .reasonix .roo .rovodev .tabnine \
   .terramind .tinycloud .trae .vibe .windsurf .zcode .zencoder agent data skills; do
@@ -131,9 +138,10 @@ echo ""
 echo "[install-agent-skills] Optional post-install steps:"
 echo "  1. Run /setup-matt-pocock-skills once (or read docs/agents/*.md if already configured)"
 echo "  2. Run /setup-pstack to write ~/.cursor/rules/pstack-models.mdc"
-echo "  3. Repo-level agent tools: ./scripts/setup-agent-stack.sh"
-echo "  4. gstack refresh (if skills are stale): ./scripts/install-gstack-skills.sh"
-echo "  5. Spec Kit full project scaffold (optional — skills already vendored):"
+echo "  3. Repo intelligence: ./scripts/install-repo-intelligence.sh"
+echo "  4. Full agent stack (+ agent-browser CLI): ./scripts/setup-agent-stack.sh"
+echo "  5. gstack refresh (if skills are stale): ./scripts/install-gstack-skills.sh"
+echo "  6. Spec Kit full project scaffold (optional — skills already vendored):"
 echo "       uv tool install specify-cli --from git+https://github.com/github/spec-kit.git"
 echo "       specify init --here --integration cursor-agent --integration-options=\"--skills\""
 echo ""
