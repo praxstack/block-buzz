@@ -34,6 +34,9 @@ Thumbs.db
 # graphify generated knowledge graph (built by graphify update .)
 graphify-out/
 
+# praxstack/skills-and-personas shallow clone cache (install-praxstack-skills.sh)
+.cache/praxstack-skills-and-personas/
+
 # Agent stack local overrides (API keys, machine-specific MCP)
 .cursor/mcp.json
 .compound-engineering/config.local.yaml

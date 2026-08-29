@@ -663,6 +663,10 @@ Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `
 
 Single-context layout (`CONTEXT.md` + `docs/adr/` at repo root). See `docs/agents/domain.md`.
 
+### Praxstack personal workflows
+
+Curated skills, personas, and paste-prompt workflows from [praxstack/skills-and-personas](https://github.com/praxstack/skills-and-personas). Install: `./scripts/install-praxstack-skills.sh` (also runs from `install-agent-skills.sh`). See `docs/agents/praxstack-skills.md` for the curated list, skipped packs, and invocation guide.
+
 ---
 
 ## See Also

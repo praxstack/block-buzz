@@ -144,6 +144,7 @@ discover → interrogate/spec → plan → implement → review → security →
 | **24601/agent-deep-research** | 1 | `deep-research` — async Gemini-grounded deep research |
 | **nutlope/hallmark** | 1 | `hallmark` — anti-AI-slop UI audit and greenfield design |
 | **wshobson/agents** | 16 | Curated plugin-domain subset (backend, Python, JS/TS, security, architecture, review) |
+| **praxstack/skills-and-personas** | 19 | Curated engineering team + PE + agent discipline; personas/workflows in `docs/agents/` |
 
 Buzz-native (`.agents/skills/`): `desktop-screenshot`, `sprout-cli`.
 
@@ -272,6 +273,38 @@ After any `npx` install, sync from `.agents/skills/` into `.cursor/skills/` (the
 
 ---
 
+## Praxstack personal
+
+[praxstack/skills-and-personas](https://github.com/praxstack/skills-and-personas) — curated personal portfolio (constellation team, backend/frontend PE, spec tools, agent discipline). **19 skills** vendored; personas and paste-prompt workflows live under `docs/agents/`.
+
+**Install or refresh:**
+
+```bash
+./scripts/install-praxstack-skills.sh
+```
+
+Runs automatically from `./scripts/install-agent-skills.sh` and `scripts/cloud-agent-install.sh`.
+
+| Location | Contents |
+| --- | --- |
+| `.cursor/skills/` | 19 curated skills (see table in `docs/agents/praxstack-skills.md`) |
+| `docs/agents/personas/praxstack/md-personas/` | Single-file persona prompts (Constellation, FRONTEND-DESIGN, BACKEND-PE, …) |
+| `docs/agents/workflows/praxstack/` | High-end operator + project-alignment paste prompts; `SAFETY.md` |
+
+**Skipped by design:** `kingmode`, `super-mode-core`, `apex-autonomous-mode` (overlap with `/poteto-mode`, gstack, `ce-work`); personal journal/health/obsidian packs; full 41-skill dump. Optional: `npx skills add praxstack/skills-and-personas --skill teach-pro-max`.
+
+**Invoke:**
+
+- Constellation multi-role planning → `constellation-team` skill or `md-personas/CONSTELLATION-TEAM.md`
+- Rust relay backend review → `backend-pe` (applies methodology directly when no language variant)
+- Desktop TypeScript → `backend-pe-typescript`, `frontend-pe`
+- Agent operating floor → `coding-agent-leadership-principles`, `superimprove`
+- Lifecycle paste prompts → copy from `docs/agents/workflows/praxstack/high-end-operator/`
+
+Full index: `docs/agents/praxstack-skills.md`.
+
+---
+
 ## Repo configuration (`docs/agents/`)
 
 | File | Purpose |
@@ -279,6 +312,7 @@ After any `npx` install, sync from `.agents/skills/` into `.cursor/skills/` (the
 | `issue-tracker.md` | GitHub Issues on praxstack/block-buzz via `gh` |
 | `triage-labels.md` | Five canonical triage label strings |
 | `domain.md` | Single-context domain doc layout |
+| `praxstack-skills.md` | Praxstack personal skills, personas, workflows index |
 
 Referenced from `AGENTS.md` § Agent skills.
 
