@@ -1,0 +1,10 @@
+# Compound Engineering — Buzz team defaults (optional keys commented in config.example.yaml)
+# Artifact root: CE skills write solutions/plans under docs/ by default.
+
+# docs_root: .compound-engineering/artifacts
+
+# Cross-model review stays on auto; Trail of Bits + gstack-review cover security for Buzz.
+# cross_model_review_mode: auto
+
+# CE Work: native-by-default; use /poteto-mode or ce-work explicitly per task.
+# work_engine_mode: off

@@ -64,6 +64,20 @@ install_skillpack microsoft/skills \
   --skill frontend-design-review --skill github-issue-creator \
   --skill continual-learning
 
+# Tier S — 2026 curated research packs (selective, not blind dumps)
+install_skillpack mvanhorn/last30days-skill --skill last30days
+install_skillpack 24601/agent-deep-research --skill deep-research
+install_skillpack nutlope/hallmark --skill hallmark
+
+# wshobson/agents — backend/security/testing subset only (not full 181-skill pack)
+install_skillpack wshobson/agents \
+  --skill api-design-principles --skill architecture-patterns \
+  --skill postgresql-table-design --skill rust-async-patterns \
+  --skill sql-optimization-patterns --skill e2e-testing-patterns \
+  --skill debugging-strategies --skill code-review-excellence
+
+# remotion-dev/skills skipped — Buzz is Rust/React/Tauri desktop, not Remotion video
+
 echo "[install-agent-skills] Installing GitHub Spec Kit skills (speckit-*)..."
 if command -v uv >/dev/null 2>&1; then
   if ! command -v specify >/dev/null 2>&1; then
@@ -117,8 +131,7 @@ echo ""
 echo "[install-agent-skills] Optional post-install steps:"
 echo "  1. Run /setup-matt-pocock-skills once (or read docs/agents/*.md if already configured)"
 echo "  2. Run /setup-pstack to write ~/.cursor/rules/pstack-models.mdc"
-echo "  3. agent-browser CLI (for live browser QA):"
-echo "       npm install -g agent-browser && agent-browser install"
+echo "  3. Repo-level agent tools: ./scripts/setup-agent-stack.sh"
 echo "  4. gstack refresh (if skills are stale): ./scripts/install-gstack-skills.sh"
 echo "  5. Spec Kit full project scaffold (optional — skills already vendored):"
 echo "       uv tool install specify-cli --from git+https://github.com/github/spec-kit.git"

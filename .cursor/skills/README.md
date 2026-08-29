@@ -6,6 +6,7 @@ Reinstall or refresh everything:
 
 ```bash
 ./scripts/install-agent-skills.sh
+./scripts/setup-agent-stack.sh   # OpenSpec, agent-browser CLI, Graphify, MCP template
 ```
 
 One-time repo setup (already done for this fork; re-run after cloning):
@@ -103,8 +104,23 @@ discover → interrogate/spec → plan → implement → review → security →
 | **microsoft/skills** | 3 | Curated Azure-agnostic: `frontend-design-review`, `github-issue-creator`, `continual-learning` |
 | **github/spec-kit** | 10 | `speckit-*` workflow (constitution → specify → plan → tasks → implement) |
 | **gstack** | 54 | Full project-level install via `./scripts/install-gstack-skills.sh` (requires bun) |
+| **mvanhorn/last30days-skill** | 1 | `last30days` — multi-source trend research (Reddit, X, HN, GitHub, …) |
+| **24601/agent-deep-research** | 1 | `deep-research` — async Gemini-grounded deep research |
+| **nutlope/hallmark** | 1 | `hallmark` — anti-AI-slop UI audit and greenfield design |
+| **wshobson/agents** | 8 | Curated backend/testing subset only (not full 181-skill pack) |
 
 Buzz-native (`.agents/skills/`): `desktop-screenshot`, `sprout-cli`.
+
+**Repo-level tools** (`./scripts/setup-agent-stack.sh`):
+
+| Tool | Purpose |
+| --- | --- |
+| OpenSpec (`@fission-ai/openspec`) | Spec-driven change proposals (`openspec/` in repo) |
+| agent-browser CLI | Live Playwright automation (pairs with `agent-browser` skill) |
+| Graphify (`graphifyy`) | Code graph when `uv` + `graphify install --project` succeed |
+| Context7 MCP | Copy `.cursor/mcp.json.example` → `.cursor/mcp.json`; set `CONTEXT7_API_KEY` locally |
+| OpenSpec | `openspec/` + `openspec-*` skills and `/opsx-*` Cursor commands |
+| Graphify | `graphify` skill + `graphify-out/` (gitignored generated graph) |
 
 **Not installed (by design):**
 
@@ -116,7 +132,11 @@ Buzz-native (`.agents/skills/`): `desktop-screenshot`, `sprout-cli`.
 | `microsoft/skills` (remainder) | Azure/Copilot/Windows-specific skills excluded from curated subset |
 | Full `awesome-copilot` | 417 skills — context rot; 13-skill curated subset installed |
 | Full `anthropics/skills` | Creative/enterprise subset excluded |
+| `remotion-dev/skills` | Buzz is Rust/React/Tauri — not Remotion video |
+| `wshobson/agents` (remainder) | 173 skills excluded — 8-skill curated subset installed |
 | `heilcheng/awesome-agent-skills` | Index only — see [More credible collections](#more-credible-collections) |
+| ECC + all methodologies active simultaneously | Pick **one** execution layer per task (`/poteto-mode`, superpowers, or `ce-work`) |
+| NVIDIA agent skills | Not Buzz stack |
 
 ---
 

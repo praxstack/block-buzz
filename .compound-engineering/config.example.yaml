@@ -1,0 +1,4 @@
+# Copy to config.yaml for team defaults. See ce-setup skill references/config-template.yaml
+# for the full option set. This file mirrors the Compound Engineering template for Buzz.
+
+# docs_root: .compound-engineering/artifacts

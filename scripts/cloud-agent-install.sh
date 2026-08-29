@@ -38,4 +38,7 @@ just hooks
 echo "[cloud-agent-install] Installing gstack Cursor skills (project-level)..."
 "${REPO_ROOT}/scripts/install-gstack-skills.sh"
 
+echo "[cloud-agent-install] Installing repo-level agent tools (OpenSpec, agent-browser, Graphify)..."
+"${REPO_ROOT}/scripts/setup-agent-stack.sh"
+
 echo "[cloud-agent-install] Done."

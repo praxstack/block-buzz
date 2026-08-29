@@ -31,7 +31,14 @@ Thumbs.db
 # Scratch / working files (AI reviews, notes, drafts)
 .scratch/
 
-# gstack runtime assets (built by scripts/install-gstack-skills.sh; SKILL.md files stay tracked)
+# graphify generated knowledge graph (built by graphify update .)
+graphify-out/
+
+# Agent stack local overrides (API keys, machine-specific MCP)
+.cursor/mcp.json
+.compound-engineering/config.local.yaml
+
+# gstack runtime assets
 .cursor/skills/gstack/bin/
 .cursor/skills/gstack/lib/
 .cursor/skills/gstack/browse/
