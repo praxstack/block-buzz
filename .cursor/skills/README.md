@@ -65,6 +65,7 @@ discover → interrogate/spec → plan → implement → review → security →
 | 7 | `differential-review` | trailofbits | Security-focused diff review |
 | 8 | `ce-work` | compound-engineering | Full compound engineering loop |
 | 9 | `improve` | shadcn | Read-only codebase audit / roadmap |
+| — | `speckit-specify` → `speckit-plan` | spec-kit | Alternative spec-first pipeline (pick one planning layer) |
 
 ---
 
@@ -99,11 +100,23 @@ discover → interrogate/spec → plan → implement → review → security →
 | **github/awesome-copilot** | 13 | Curated: `github-issues`, `acquire-codebase-knowledge`, `codeql`, … |
 | **EveryInc/compound-engineering** | 34 | `ce-work`, `ce-plan`, `ce-compound`, browser test, PR babysit |
 | **shadcn/improve** | 1 | Read-only audit |
+| **microsoft/skills** | 3 | Curated Azure-agnostic: `frontend-design-review`, `github-issue-creator`, `continual-learning` |
+| **github/spec-kit** | 10 | `speckit-*` workflow (constitution → specify → plan → tasks → implement) |
 | **gstack** | stubs | See gstack caveat below |
 
 Buzz-native (`.agents/skills/`): `desktop-screenshot`, `sprout-cli`.
 
-**Not installed:** `microsoft/skills` (context-rot warning), full `awesome-copilot` (417 skills), full `anthropics/skills` (creative/enterprise subset excluded).
+**Not installed (by design):**
+
+| Pack | Reason |
+| --- | --- |
+| `supabase/agent-skills` | Buzz uses Postgres directly, not Supabase |
+| `cloudflare/skills` | Not in Buzz stack |
+| `aws/agent-toolkit-for-aws` | Not in Buzz stack |
+| `microsoft/skills` (remainder) | Azure/Copilot/Windows-specific skills excluded from curated subset |
+| Full `awesome-copilot` | 417 skills — context rot; 13-skill curated subset installed |
+| Full `anthropics/skills` | Creative/enterprise subset excluded |
+| `heilcheng/awesome-agent-skills` | Index only — see [More credible collections](#more-credible-collections) |
 
 ---
 

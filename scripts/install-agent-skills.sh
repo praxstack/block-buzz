@@ -59,6 +59,28 @@ install_skillpack github/awesome-copilot \
 # Compound engineering workflow
 install_skillpack EveryInc/compound-engineering-plugin --skill '*'
 
+# Microsoft — Azure-agnostic dev subset only (not full 13-skill pack)
+install_skillpack microsoft/skills \
+  --skill frontend-design-review --skill github-issue-creator \
+  --skill continual-learning
+
+echo "[install-agent-skills] Installing GitHub Spec Kit skills (speckit-*)..."
+if command -v uv >/dev/null 2>&1; then
+  if ! command -v specify >/dev/null 2>&1; then
+    uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
+  fi
+  SPECKIT_TMP="$(mktemp -d)"
+  (
+    cd "${SPECKIT_TMP}"
+    specify init --here --integration cursor-agent \
+      --integration-options="--skills" --force --non-interactive >/dev/null
+    cp -a "${SPECKIT_TMP}/.cursor/skills/speckit-"* "${REPO_ROOT}/.cursor/skills/"
+  )
+  rm -rf "${SPECKIT_TMP}"
+else
+  echo "[install-agent-skills] Skipping spec-kit (uv not found — install from https://docs.astral.sh/uv/)" >&2
+fi
+
 echo "[install-agent-skills] Installing pstack from cursor/plugins..."
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -98,5 +120,8 @@ echo "  4. gstack (review/QA/ship — global, requires bun):"
 echo "       git clone --depth 1 https://github.com/garrytan/gstack.git /tmp/gstack"
 echo "       (cd /tmp/gstack && ./setup --host cursor)"
 echo "     Or use the stub skills already in .cursor/skills/gstack-*"
+echo "  5. Spec Kit full project scaffold (optional — skills already vendored):"
+echo "       uv tool install specify-cli --from git+https://github.com/github/spec-kit.git"
+echo "       specify init --here --integration cursor-agent --integration-options=\"--skills\""
 echo ""
 echo "[install-agent-skills] Done. $(find .cursor/skills -name SKILL.md | wc -l) skills in .cursor/skills/"
