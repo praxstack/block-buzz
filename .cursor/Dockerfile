@@ -31,3 +31,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /etc/docker \
     && printf '%s\n' '{"storage-driver":"vfs"}' > /etc/docker/daemon.json
+
+# bun — required by gstack skill install (scripts/install-gstack-skills.sh)
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/home/ubuntu/.bun/bin:${PATH}"

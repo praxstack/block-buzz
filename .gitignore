@@ -31,6 +31,12 @@ Thumbs.db
 # Scratch / working files (AI reviews, notes, drafts)
 .scratch/
 
+# gstack runtime assets (built by scripts/install-gstack-skills.sh; SKILL.md files stay tracked)
+.cursor/skills/gstack/bin/
+.cursor/skills/gstack/lib/
+.cursor/skills/gstack/browse/
+.cursor/skills/gstack/supabase/
+
 # Playwright artifacts
 playwright-report/
 test-results/

@@ -81,6 +81,9 @@ else
   echo "[install-agent-skills] Skipping spec-kit (uv not found — install from https://docs.astral.sh/uv/)" >&2
 fi
 
+echo "[install-agent-skills] Installing gstack (review/QA/ship/plan workflows)..."
+"${REPO_ROOT}/scripts/install-gstack-skills.sh"
+
 echo "[install-agent-skills] Installing pstack from cursor/plugins..."
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -116,10 +119,7 @@ echo "  1. Run /setup-matt-pocock-skills once (or read docs/agents/*.md if alrea
 echo "  2. Run /setup-pstack to write ~/.cursor/rules/pstack-models.mdc"
 echo "  3. agent-browser CLI (for live browser QA):"
 echo "       npm install -g agent-browser && agent-browser install"
-echo "  4. gstack (review/QA/ship — global, requires bun):"
-echo "       git clone --depth 1 https://github.com/garrytan/gstack.git /tmp/gstack"
-echo "       (cd /tmp/gstack && ./setup --host cursor)"
-echo "     Or use the stub skills already in .cursor/skills/gstack-*"
+echo "  4. gstack refresh (if skills are stale): ./scripts/install-gstack-skills.sh"
 echo "  5. Spec Kit full project scaffold (optional — skills already vendored):"
 echo "       uv tool install specify-cli --from git+https://github.com/github/spec-kit.git"
 echo "       specify init --here --integration cursor-agent --integration-options=\"--skills\""
