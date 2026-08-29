@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# Idempotent Cloud Agent install: Hermit toolchain, JS deps, core Rust builds.
+# Idempotent Cloud Agent install: infra bootstrap, Hermit toolchain, JS deps, core Rust builds.
+# Install runs before start during environment builds, so bootstrap Docker/services here.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${REPO_ROOT}"
+
+"${REPO_ROOT}/scripts/cloud-agent-start.sh"
 
 # shellcheck disable=SC1091
 . ./bin/activate-hermit
