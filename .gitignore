@@ -67,6 +67,62 @@ identity.key
 # Claude Code worktrees
 .claude/worktrees/
 
+# Stray directories created by `npx skills add` when --agent is broad
+.adal/
+.aider-desk/
+.augment/
+.autohand/
+.bob/
+.codeartsdoer/
+.codebuddy/
+.codemaker/
+.codestudio/
+.commandcode/
+.continue/
+.cortex/
+.crush/
+.devin/
+.factory/
+.forge/
+.grok/
+.hermes/
+.iflow/
+.inferencesh/
+.intersect/
+.jazz/
+.junie/
+.kilocode/
+.kimchi/
+.kiro/
+.kode/
+.lingma/
+.mcpjam/
+.minimax/
+.moxby/
+.mux/
+.neovate/
+.ona/
+.openhands/
+.pi/
+.pochi/
+.posit/
+.qoder/
+.qwen/
+.reasonix/
+.roo/
+.rovodev/
+.tabnine/
+.terramind/
+.tinycloud/
+.trae/
+.vibe/
+.windsurf/
+.zcode/
+.zencoder/
+/agent/
+/data/
+/skills/
+
 # mesh-llm build cache
 .cache/
 
