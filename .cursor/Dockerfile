@@ -9,6 +9,7 @@ RUN apt-get update \
       git \
       gnupg \
       lsb-release \
+      sudo \
       fuse-overlayfs \
       iptables \
       docker.io \
@@ -28,6 +29,16 @@ RUN apt-get update \
       pkg-config \
       lsof \
       python3 \
-    && rm -rf /var/lib/apt/lists/* \
+    && update-alternatives --set iptables /usr/sbin/iptables-legacy \
+    && update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy \
     && mkdir -p /etc/docker \
-    && printf '%s\n' '{"storage-driver":"vfs"}' > /etc/docker/daemon.json
+    && printf '%s\n' '{"storage-driver":"fuse-overlayfs","iptables":false,"bridge":"none"}' > /etc/docker/daemon.json \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && echo 'ubuntu ALL=(ALL) NOPASSWD: /usr/bin/dockerd, /usr/sbin/dockerd, /bin/chmod, /usr/bin/tee' > /etc/sudoers.d/ubuntu-docker \
+    && chmod 0440 /etc/sudoers.d/ubuntu-docker
+
+RUN usermod -aG docker ubuntu || true
+
+USER ubuntu
+WORKDIR /workspace
