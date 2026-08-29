@@ -12,18 +12,52 @@ if ! command -v npx >/dev/null 2>&1; then
 fi
 
 SKILLS=(skills@latest)
-add() {
-  npx "${SKILLS[@]}" add "$@" --all -y -a cursor --copy
+
+# install_skillpack <repo> [--skill <name>|--skill '*'] [extra npx args...]
+install_skillpack() {
+  local repo="$1"
+  shift
+  echo "[install-agent-skills] Installing ${repo}..."
+  npx "${SKILLS[@]}" add "${repo}" "$@" -y -a cursor --copy
 }
 
 echo "[install-agent-skills] Installing curated skill packs..."
-add mattpocock/skills
-add shadcn/improve
-add obra/superpowers
-add addyosmani/agent-skills
-npx "${SKILLS[@]}" add vercel-labs/agent-skills \
-  --skill vercel-react-best-practices --skill web-design-guidelines \
-  -y -a cursor --copy
+
+# Layer 0 — discovery
+install_skillpack vercel-labs/skills --skill find-skills
+
+# Core methodology packs
+install_skillpack mattpocock/skills
+install_skillpack obra/superpowers
+install_skillpack addyosmani/agent-skills
+install_skillpack shadcn/improve
+
+# Vercel UI / React
+install_skillpack vercel-labs/agent-skills --skill '*'
+
+# Security & audit (Trail of Bits — full pack)
+install_skillpack trailofbits/skills --skill '*'
+
+# Browser QA
+install_skillpack vercel-labs/agent-browser --skill agent-browser
+
+# Anthropic dev subset (curated — not creative/enterprise skills)
+install_skillpack anthropics/skills \
+  --skill skill-creator --skill mcp-builder --skill webapp-testing \
+  --skill frontend-design --skill doc-coauthoring --skill web-artifacts-builder \
+  --skill claude-api --skill discernment-nudge
+
+# GitHub / Copilot high-value subset (curated — not full 400+ pack)
+install_skillpack github/awesome-copilot \
+  --skill acquire-codebase-knowledge --skill agent-skill-stack \
+  --skill agent-owasp-compliance --skill agent-governance \
+  --skill agentic-eval --skill ai-ready --skill anti-ui-slop \
+  --skill architecture-blueprint-generator --skill codebase-memory-mcp \
+  --skill codeql --skill conventional-commit \
+  --skill github-issues --skill pr-dashboard
+
+# Compound engineering workflow
+install_skillpack EveryInc/compound-engineering-plugin --skill '*'
 
 echo "[install-agent-skills] Installing pstack from cursor/plugins..."
 TMP="$(mktemp -d)"
@@ -54,8 +88,15 @@ for d in .adal .aider-desk .augment .autohand .bob .codeartsdoer .codebuddy \
   [[ -d "$d" ]] && rm -rf "$d"
 done
 
-echo "[install-agent-skills] Optional: install gstack globally for Cursor (requires bun):"
-echo "  git clone --depth 1 https://github.com/garrytan/gstack.git /tmp/gstack"
-echo "  (cd /tmp/gstack && ./setup --host cursor)"
+echo ""
+echo "[install-agent-skills] Optional post-install steps:"
+echo "  1. Run /setup-matt-pocock-skills once (or read docs/agents/*.md if already configured)"
+echo "  2. Run /setup-pstack to write ~/.cursor/rules/pstack-models.mdc"
+echo "  3. agent-browser CLI (for live browser QA):"
+echo "       npm install -g agent-browser && agent-browser install"
+echo "  4. gstack (review/QA/ship — global, requires bun):"
+echo "       git clone --depth 1 https://github.com/garrytan/gstack.git /tmp/gstack"
+echo "       (cd /tmp/gstack && ./setup --host cursor)"
+echo "     Or use the stub skills already in .cursor/skills/gstack-*"
 echo ""
 echo "[install-agent-skills] Done. $(find .cursor/skills -name SKILL.md | wc -l) skills in .cursor/skills/"

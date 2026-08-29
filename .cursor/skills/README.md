@@ -8,69 +8,183 @@ Reinstall or refresh everything:
 ./scripts/install-agent-skills.sh
 ```
 
-## Primary workflows
+One-time repo setup (already done for this fork; re-run after cloning):
 
-| Goal | Start here | Source |
+```bash
+# Wire issue tracker + triage labels + domain docs
+/setup-matt-pocock-skills
+
+# Write ~/.cursor/rules/pstack-models.mdc
+/setup-pstack
+```
+
+---
+
+## Layered architecture
+
+Skills are organized into layers. **Activate one methodology per task** — do not stack competing planning/review skills in the same session.
+
+```
+discover → interrogate/spec → plan → implement → review → security → browser QA → ship → learn
+    │            │              │         │          │          │           │         │       │
+    ▼            ▼              ▼         ▼          ▼          ▼           ▼         ▼       ▼
+ find-skills   interrogate    writing-  poteto-   gstack-    trailofbits  agent-   gstack-  ce-
+ agent-skill-  to-spec        plans     mode      review     differential browser  ship     compound
+ stack         brainstorming  ce-plan   super-    code-      review       desktop-         compound-
+ acquire-      implement-spec subagent  powers    review     semgrep      screenshot       refresh
+ codebase-     ce-brainstorm            tdd                  rust-review  ce-test-
+ knowledge                                              agent-owasp
+                                                        compliance
+```
+
+| Layer | When to use | Primary skills |
 | --- | --- | --- |
-| Rigorous engineering (default) | `/poteto-mode <task>` | [pstack](https://github.com/cursor/plugins/tree/main/pstack) |
-| Configure pstack models | `/setup-pstack` | pstack |
-| Spec → plan → TDD execution | superpowers chain: `brainstorming` → `writing-plans` → `subagent-driven-development` | [obra/superpowers](https://github.com/obra/superpowers) |
-| Codebase audit / roadmap (read-only) | `improve` | [shadcn/improve](https://github.com/shadcn/improve) |
-| Review / QA / ship | `gstack-review`, `gstack-qa`, `gstack-ship` | [garrytan/gstack](https://github.com/garrytan/gstack) (global `~/.cursor/skills`) |
-| Triage / diagnose / architecture | `triage`, `diagnosing-bugs`, `improve-codebase-architecture` | [mattpocock/skills](https://github.com/mattpocock/skills) |
-| Production lifecycle gates | `using-agent-skills` meta + lifecycle skills | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) |
-| React / UI quality | `react-best-practices`, `web-design-guidelines` | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) |
+| **Discover** | Unknown repo, need the right skill, onboarding | `find-skills`, `agent-skill-stack`, `acquire-codebase-knowledge` |
+| **Interrogate / spec** | Vague ask → clear requirements | `interrogate`, `brainstorming`, `to-spec`, `ce-brainstorm`, `implement-spec` |
+| **Plan** | Approved spec → executable plan | `writing-plans`, `ce-plan`, `subagent-driven-development` |
+| **Implement** | Day-to-day coding (pick **one**) | `/poteto-mode` (pstack), superpowers TDD chain, `ce-work` |
+| **Review** | Pre-merge quality gate | `gstack-review`, `code-review`, `ce-code-review`, `differential-review` |
+| **Security** | Auth/crypto/infra changes | `trailofbits/*` (semgrep, rust-review, agent-owasp-compliance) |
+| **Browser QA** | User-visible UI verification | `agent-browser`, `desktop-screenshot`, `ce-test-browser`, Playwright E2E |
+| **Ship** | Release discipline | `gstack-ship`, `ce-commit-push-pr`, `finishing-a-development-branch` |
+| **Learn** | Capture patterns for next time | `ce-compound`, `ce-compound-refresh`, `writing-skills` |
 
-Run `/setup-matt-pocock-skills` once per repo to wire issue tracker and triage labels.
+---
 
-## Skill packs installed
+## Core 10 (start here)
 
-### pstack (45 skills + playbooks)
+| # | Skill / command | Pack | Role |
+| --- | --- | --- | --- |
+| 0 | `find-skills` | vercel-labs/skills | Discovery — locate skills for any task |
+| 1 | `/poteto-mode` | pstack | Default rigorous implementation |
+| 2 | `brainstorming` → `writing-plans` | superpowers | Spec-first when requirements are fuzzy |
+| 3 | `triage` | mattpocock | Issue queue + label workflow |
+| 4 | `gstack-review` | gstack (stubs) | Multi-perspective code review |
+| 5 | `agent-browser` | vercel-labs/agent-browser | Live browser automation |
+| 6 | `desktop-screenshot` | Buzz-native | Mock-bridge Playwright screenshots |
+| 7 | `differential-review` | trailofbits | Security-focused diff review |
+| 8 | `ce-work` | compound-engineering | Full compound engineering loop |
+| 9 | `improve` | shadcn | Read-only codebase audit / roadmap |
 
-Poteto's Cursor engineering stack: `poteto-mode`, `how`, `why`, `swarm`, `arena`, `architect`, `interrogate`, `tdd`, `unslop`, principles, and 22 playbooks under `poteto-mode/playbooks/`.
+---
 
-### obra/superpowers (14 skills)
+## Which methodology when
 
-`brainstorming`, `writing-plans`, `executing-plans`, `subagent-driven-development`, `test-driven-development`, `systematic-debugging`, `verification-before-completion`, `requesting-code-review`, `receiving-code-review`, `using-git-worktrees`, `finishing-a-development-branch`, `dispatching-parallel-agents`, `writing-skills`, `using-superpowers`.
+| Situation | Use | Avoid stacking |
+| --- | --- | --- |
+| Routine feature / bugfix in Buzz | `/poteto-mode` | superpowers + ce-work + poteto-mode together |
+| Requirements unclear | `brainstorming` → `writing-plans` → then implement | Starting to code before plan sign-off |
+| Issue from GitHub queue | `triage` → `to-spec` → implement | ad-hoc `gh` without label vocabulary |
+| Security-sensitive change (auth, crypto, relay) | `differential-review` + `rust-review` | Skipping Trail of Bits layer |
+| Desktop/mobile UI change | `desktop-screenshot` or `agent-browser` | Full-page unscoped screenshots |
+| Pre-PR review | `gstack-review` or `code-review` | Running every review skill in sequence |
+| Release / merge | `gstack-ship` or `finishing-a-development-branch` | — |
+| "What skills do I need?" | `find-skills` or `agent-skill-stack` | Installing random packs without `-l` first |
 
-### mattpocock/skills (37 skills)
+---
 
-Engineering router (`ask-matt`), `code-review`, `diagnosing-bugs`, `tdd`, `triage`, `improve-codebase-architecture`, `setup-matt-pocock-skills`, and more.
+## Installed packs
 
-### addyosmani/agent-skills (25 skills)
+| Pack | Skills | Install notes |
+| --- | ---: | --- |
+| **pstack** | ~45 | Cloned from `cursor/plugins`; run `/setup-pstack` for model overrides |
+| **trailofbits/skills** | 81 | Full security/audit pack (`--skill '*'`); includes `rust-review`, `semgrep`, `differential-review` |
+| **mattpocock/skills** | 37 | Run `/setup-matt-pocock-skills` once; reads `docs/agents/*.md` |
+| **obra/superpowers** | 14 | Spec → plan → TDD execution chain |
+| **addyosmani/agent-skills** | 25 | SDLC lifecycle gates |
+| **vercel-labs/agent-skills** | 9 | React/Next UI performance + composition patterns |
+| **vercel-labs/agent-browser** | 1 | Pairs with `desktop-screenshot` for live vs mock QA |
+| **vercel-labs/skills** | 1 | `find-skills` discovery |
+| **anthropics/skills** | 8 | Dev subset only: `skill-creator`, `mcp-builder`, `webapp-testing`, etc. |
+| **github/awesome-copilot** | 13 | Curated: `github-issues`, `acquire-codebase-knowledge`, `codeql`, … |
+| **EveryInc/compound-engineering** | 34 | `ce-work`, `ce-plan`, `ce-compound`, browser test, PR babysit |
+| **shadcn/improve** | 1 | Read-only audit |
+| **gstack** | stubs | See gstack caveat below |
 
-Full SDLC: spec/plan/build/test/review/ship patterns, CI/CD, observability, security, performance, ADRs.
+Buzz-native (`.agents/skills/`): `desktop-screenshot`, `sprout-cli`.
 
-### shadcn/improve (1 skill)
+**Not installed:** `microsoft/skills` (context-rot warning), full `awesome-copilot` (417 skills), full `anthropics/skills` (creative/enterprise subset excluded).
 
-Read-only codebase survey producing prioritized implementation plans for other agents.
+---
 
-### gstack (50+ skills, global install)
+## gstack cursor caveat
 
-CEO review, design review, `/review`, `/qa`, `/ship`, `/browse`, security (`/cso`). Installed to `~/.cursor/skills/gstack*` via `./setup --host cursor` (requires bun).
+[gstack](https://github.com/garrytan/gstack) (`/review`, `/qa`, `/ship`, `/browse`, `/cso`) requires a **global** install with bun:
 
-### vercel-labs/agent-skills
+```bash
+git clone --depth 1 https://github.com/garrytan/gstack.git /tmp/gstack
+(cd /tmp/gstack && ./setup --host cursor)
+```
 
-`react-best-practices`, `web-design-guidelines`.
+This repo ships **stub skills** under `.cursor/skills/gstack-*` so agents know the commands exist. Stubs document the workflow; a global install unlocks the full skill bodies. Optional — skip on Cloud Agents without bun.
+
+---
+
+## agent-browser + desktop screenshots
+
+Two complementary browser QA paths:
+
+| Tool | When | How |
+| --- | --- | --- |
+| **`desktop-screenshot`** | Buzz desktop UI (Tauri mock bridge) | `just desktop-screenshot --name foo` or Playwright E2E specs |
+| **`agent-browser`** | Live web apps, staging, non-mock flows | CLI-driven Playwright automation |
+
+**agent-browser CLI** (optional global install):
+
+```bash
+npm install -g agent-browser
+agent-browser install          # downloads Chrome
+agent-browser install --with-deps   # Linux: include system libraries
+```
+
+Verified working in Cloud Agent VMs (Chrome 152). On bare Linux hosts, use `--with-deps` if launch fails.
+
+Pairing pattern: use `agent-browser` to drive a running `just desktop-dev` or staging URL for interactive QA; use `desktop-screenshot` for deterministic PR screenshots with seeded mock state.
+
+---
+
+## Per-pack install commands
+
+The install script wraps these; run individually to refresh one pack:
+
+```bash
+# Discovery
+npx skills add vercel-labs/skills --skill find-skills -y -a cursor --copy
+
+# Full packs
+npx skills add trailofbits/skills --skill '*' -y -a cursor --copy
+npx skills add vercel-labs/agent-skills --skill '*' -y -a cursor --copy
+npx skills add EveryInc/compound-engineering-plugin --skill '*' -y -a cursor --copy
+
+# Curated subsets
+npx skills add anthropics/skills --skill skill-creator --skill mcp-builder \
+  --skill webapp-testing -y -a cursor --copy
+npx skills add github/awesome-copilot --skill github-issues \
+  --skill acquire-codebase-knowledge -y -a cursor --copy
+```
+
+After any `npx` install, sync from `.agents/skills/` into `.cursor/skills/` (the install script does this automatically).
+
+---
+
+## Repo configuration (`docs/agents/`)
+
+| File | Purpose |
+| --- | --- |
+| `issue-tracker.md` | GitHub Issues on praxstack/block-buzz via `gh` |
+| `triage-labels.md` | Five canonical triage label strings |
+| `domain.md` | Single-context domain doc layout |
+
+Referenced from `AGENTS.md` § Agent skills.
+
+---
 
 ## More credible collections
 
 | Repo | Why |
 | --- | --- |
-| [heilcheng/awesome-agent-skills](https://github.com/heilcheng/awesome-agent-skills) | Curated index + [skills.sh](https://skills.sh) leaderboard |
-| [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | React/Next.js performance and UI |
-| [anthropics/skills](https://github.com/anthropics/skills) | Official Anthropic skill examples |
-| [wshobson/agents](https://github.com/wshobson/agents) | Multi-plugin orchestration patterns |
-| [Prathmesh2000/cursor_agent-orchestrator](https://github.com/Prathmesh2000/cursor_agent-orchestrator) | Role-based multi-agent workflows |
+| [skills.sh](https://skills.sh) | Leaderboard + `npx skills find <query>` |
+| [heilcheng/awesome-agent-skills](https://github.com/heilcheng/awesome-agent-skills) | Curated index |
+| [wshobson/agents](https://github.com/wshobson/agents) | Multi-plugin orchestration |
 
-Browse installs: `npx skills find <query>` or https://skills.sh
-
-## Overlap guidance
-
-Several packs cover TDD, code review, and planning. Prefer:
-
-1. **pstack `/poteto-mode`** for day-to-day rigorous implementation in Cursor
-2. **superpowers** when you want explicit spec/plan/sign-off before coding
-3. **gstack** for review, QA in a real browser, and release discipline
-4. **mattpocock** for issue/triage integration and architecture diagnosis
-5. **improve** when you want a read-only audit handoff, not implementation
+Browse: `npx skills find <query>`
