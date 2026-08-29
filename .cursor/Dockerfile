@@ -35,8 +35,8 @@ RUN apt-get update \
     && printf '%s\n' '{"storage-driver":"fuse-overlayfs","iptables":false,"bridge":"none"}' > /etc/docker/daemon.json \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
-    && echo 'ubuntu ALL=(ALL) NOPASSWD: /usr/bin/dockerd, /usr/sbin/dockerd, /bin/chmod, /usr/bin/tee' > /etc/sudoers.d/ubuntu-docker \
-    && chmod 0440 /etc/sudoers.d/ubuntu-docker
+    && echo 'ubuntu ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/ubuntu-cloud-agent \
+    && chmod 0440 /etc/sudoers.d/ubuntu-cloud-agent
 
 RUN usermod -aG docker ubuntu || true
 
