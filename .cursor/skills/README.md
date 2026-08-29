@@ -59,7 +59,7 @@ discover → interrogate/spec → plan → implement → review → security →
 | 1 | `/poteto-mode` | pstack | Default rigorous implementation |
 | 2 | `brainstorming` → `writing-plans` | superpowers | Spec-first when requirements are fuzzy |
 | 3 | `triage` | mattpocock | Issue queue + label workflow |
-| 4 | `gstack-review` | gstack (stubs) | Multi-perspective code review |
+| 4 | `gstack-plan-ceo-review` | gstack | CEO/founder plan review — scope expansion, strategy |
 | 5 | `agent-browser` | vercel-labs/agent-browser | Live browser automation |
 | 6 | `desktop-screenshot` | Buzz-native | Mock-bridge Playwright screenshots |
 | 7 | `differential-review` | trailofbits | Security-focused diff review |
@@ -102,7 +102,7 @@ discover → interrogate/spec → plan → implement → review → security →
 | **shadcn/improve** | 1 | Read-only audit |
 | **microsoft/skills** | 3 | Curated Azure-agnostic: `frontend-design-review`, `github-issue-creator`, `continual-learning` |
 | **github/spec-kit** | 10 | `speckit-*` workflow (constitution → specify → plan → tasks → implement) |
-| **gstack** | stubs | See gstack caveat below |
+| **gstack** | 54 | Full project-level install via `./scripts/install-gstack-skills.sh` (requires bun) |
 
 Buzz-native (`.agents/skills/`): `desktop-screenshot`, `sprout-cli`.
 
@@ -120,16 +120,49 @@ Buzz-native (`.agents/skills/`): `desktop-screenshot`, `sprout-cli`.
 
 ---
 
-## gstack cursor caveat
+## gstack (project-level)
 
-[gstack](https://github.com/garrytan/gstack) (`/review`, `/qa`, `/ship`, `/browse`, `/cso`) requires a **global** install with bun:
+[gstack](https://github.com/garrytan/gstack) ships **54 skills** under `.cursor/skills/gstack-*` plus a runtime root at `.cursor/skills/gstack/` (`bin/`, `lib/`, `browse/`). Skill bodies are vendored as `SKILL.md` files; runtime binaries are built at install time (~250MB) and gitignored.
+
+**Install or refresh** (requires [bun](https://bun.sh)):
 
 ```bash
-git clone --depth 1 https://github.com/garrytan/gstack.git /tmp/gstack
-(cd /tmp/gstack && ./setup --host cursor)
+./scripts/install-gstack-skills.sh
 ```
 
-This repo ships **stub skills** under `.cursor/skills/gstack-*` so agents know the commands exist. Stubs document the workflow; a global install unlocks the full skill bodies. Optional — skip on Cloud Agents without bun.
+Cloud Agents run this automatically via `scripts/cloud-agent-install.sh`.
+
+### How to invoke in Cursor
+
+gstack slash commands map to **directory names** under `.cursor/skills/`:
+
+| gstack command | Cursor skill directory | `name:` in frontmatter |
+| --- | --- | --- |
+| `/plan-ceo-review` | `gstack-plan-ceo-review` | `plan-ceo-review` |
+| `/review` | `gstack-review` | `review` |
+| `/ship` | `gstack-ship` | `ship` |
+| `/qa` | `gstack-qa` | `qa` |
+| `/office-hours` | `gstack-office-hours` | `office-hours` |
+
+**In chat**, ask naturally ("run plan-ceo-review on this feature idea") or reference the skill directory (`@gstack-plan-ceo-review`). Cursor does not register gstack's `/slash` syntax natively — the agent discovers skills by description and reads `SKILL.md` when the task matches.
+
+**CEO review example:**
+
+```
+Run the gstack plan-ceo-review workflow on this plan: [paste or link plan]
+```
+
+The skill preamble runs `.cursor/skills/gstack/bin/gstack-skill-start` for session telemetry and onboarding gates. If runtime assets are missing, skills degrade gracefully and prompt you to run `./scripts/install-gstack-skills.sh`.
+
+### All 54 gstack skills
+
+`gstack`, `gstack-autoplan`, `gstack-benchmark`, `gstack-benchmark-models`, `gstack-browse`, `gstack-canary`, `gstack-careful`, `gstack-claude`, `gstack-context-restore`, `gstack-context-save`, `gstack-cso`, `gstack-design-consultation`, `gstack-design-html`, `gstack-design-review`, `gstack-design-shotgun`, `gstack-devex-review`, `gstack-diagram`, `gstack-document-generate`, `gstack-document-release`, `gstack-freeze`, `gstack-guard`, `gstack-health`, `gstack-investigate`, `gstack-ios-clean`, `gstack-ios-design-review`, `gstack-ios-fix`, `gstack-ios-qa`, `gstack-ios-sync`, `gstack-land-and-deploy`, `gstack-landing-report`, `gstack-learn`, `gstack-make-pdf`, `gstack-office-hours`, `gstack-open-gstack-browser`, `gstack-pair-agent`, `gstack-plan-ceo-review`, `gstack-plan-design-review`, `gstack-plan-devex-review`, `gstack-plan-eng-review`, `gstack-plan-tune`, `gstack-qa`, `gstack-qa-only`, `gstack-retro`, `gstack-review`, `gstack-scrape`, `gstack-setup-browser-cookies`, `gstack-setup-deploy`, `gstack-setup-gbrain`, `gstack-ship`, `gstack-skillify`, `gstack-spec`, `gstack-sync-gbrain`, `gstack-unfreeze`, `gstack-upgrade`
+
+### Known limitations
+
+- `./setup --host cursor` works but is omitted from `setup --help` text in some gstack versions; our install script calls it directly.
+- Browse binary build requires bun and Playwright Chromium (~2–5 min first run).
+- `gstack-ship` SKILL.md exceeds gstack's own 40K token ceiling warning during generation (non-fatal).
 
 ---
 

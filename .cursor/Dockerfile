@@ -42,3 +42,7 @@ RUN usermod -aG docker ubuntu || true
 
 USER ubuntu
 WORKDIR /workspace
+
+# bun — required by gstack skill install (scripts/install-gstack-skills.sh)
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/home/ubuntu/.bun/bin:${PATH}"
