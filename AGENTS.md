@@ -105,6 +105,16 @@ just ci                   # run before any PR
 
 See CONTRIBUTING.md for full setup details and dependency requirements.
 
+### Cloud Agents
+
+Repository-managed Cloud Agent environments live in `.cursor/environment.json`.
+`scripts/cloud-agent-start.sh` boots Docker, runs `just _ensure-services` and
+`just _ensure-migrations`, and stops optional Keycloak/Prometheus to avoid OOM.
+`scripts/cloud-agent-install.sh` calls start first (install runs before start
+during environment builds), then pre-builds relay/admin/CLI and installs
+Playwright for desktop screenshots. Relay and desktop-dev terminals start
+automatically; use `just test` for integration tests.
+
 ---
 
 ## Quality Gates

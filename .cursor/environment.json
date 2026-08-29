@@ -1,20 +1,36 @@
 {
   "name": "Buzz",
+  "user": "ubuntu",
   "build": {
     "dockerfile": "Dockerfile",
     "context": ".."
   },
-  "user": "ubuntu",
   "install": "./scripts/cloud-agent-install.sh",
   "start": "./scripts/cloud-agent-start.sh",
   "terminals": [
     {
       "name": "relay",
-      "command": "cd /workspace && . ./bin/activate-hermit && just relay"
+      "command": "cd /workspace && . ./bin/activate-hermit && just relay",
+      "description": "Buzz WebSocket relay at ws://localhost:3000"
     },
     {
       "name": "desktop-dev",
-      "command": "cd /workspace && . ./bin/activate-hermit && just desktop-dev"
+      "command": "cd /workspace && . ./bin/activate-hermit && just desktop-dev",
+      "description": "Desktop Vite dev server (web-only; mock/E2E bridge in e2e builds)"
+    }
+  ],
+  "ports": [
+    {
+      "name": "relay",
+      "port": 3000
+    },
+    {
+      "name": "adminer",
+      "port": 8082
+    },
+    {
+      "name": "minio",
+      "port": 9000
     }
   ]
 }
