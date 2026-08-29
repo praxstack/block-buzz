@@ -1,0 +1,20 @@
+{
+  "name": "Buzz",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "user": "ubuntu",
+  "install": "./scripts/cloud-agent-install.sh",
+  "start": "./scripts/cloud-agent-start.sh",
+  "terminals": [
+    {
+      "name": "relay",
+      "command": "cd /workspace && . ./bin/activate-hermit && just relay"
+    },
+    {
+      "name": "desktop-dev",
+      "command": "cd /workspace && . ./bin/activate-hermit && just desktop-dev"
+    }
+  ]
+}

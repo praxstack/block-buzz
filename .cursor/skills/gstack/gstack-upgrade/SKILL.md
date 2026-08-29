@@ -1,0 +1,1 @@
+/tmp/skill-repos/gstack/.cursor/skills/gstack-upgrade/SKILL.md
