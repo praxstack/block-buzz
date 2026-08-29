@@ -11,10 +11,30 @@ export PATH="${REPO_ROOT}/bin:${PATH}"
 
 DOCKER_DAEMON_JSON='{"storage-driver":"fuse-overlayfs","iptables":false,"bridge":"none"}'
 
+resolve_dockerd_bin() {
+  if command -v dockerd >/dev/null 2>&1; then
+    command -v dockerd
+    return 0
+  fi
+  for candidate in /usr/bin/dockerd /usr/sbin/dockerd; do
+    if [[ -x "${candidate}" ]]; then
+      echo "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
+
 ensure_docker() {
   if docker info >/dev/null 2>&1; then
     return 0
   fi
+
+  local dockerd_bin
+  dockerd_bin="$(resolve_dockerd_bin)" || {
+    echo "[cloud-agent-start] dockerd not found; install docker.io in the image" >&2
+    exit 1
+  }
 
   sudo mkdir -p /etc/docker
   if [[ ! -f /etc/docker/daemon.json ]] || ! grep -q fuse-overlayfs /etc/docker/daemon.json 2>/dev/null; then
@@ -22,8 +42,8 @@ ensure_docker() {
   fi
 
   if ! pgrep -x dockerd >/dev/null 2>&1; then
-    echo "[cloud-agent-start] Starting Docker daemon..."
-    sudo dockerd --host=unix:///var/run/docker.sock >/tmp/dockerd.log 2>&1 &
+    echo "[cloud-agent-start] Starting Docker daemon (${dockerd_bin})..."
+    sudo "${dockerd_bin}" --host=unix:///var/run/docker.sock >/tmp/dockerd.log 2>&1 &
     for _ in $(seq 1 60); do
       if docker info >/dev/null 2>&1; then
         break
