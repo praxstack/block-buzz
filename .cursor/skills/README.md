@@ -30,7 +30,7 @@ Curated tooling and skills added for 2026 agent workflows. **One methodology per
 | --- | --- | --- |
 | **OpenSpec** | `./scripts/install-repo-intelligence.sh` | Spec-driven change proposals under `openspec/` |
 | **Graphify** | same script (`uv tool install graphifyy`) | Code graph / structural navigation in Cursor |
-| **Context7 MCP** | Copy `.cursor/mcp.json.example` → `~/.cursor/mcp.json` or merge locally | Up-to-date library docs via `@upstash/context7-mcp` |
+| **Context7 MCP** | Copy `.cursor/mcp.json.example` → `~/.cursor/mcp.json` or merge locally | Up-to-date library docs via `npx @upstash/context7-mcp` (stdio) |
 | **last30days** | `install-agent-skills.sh` | Multi-source recency radar (Reddit, X, HN, GitHub, …) |
 | **deep-research** | `install-agent-skills.sh` | Async Gemini-grounded deep research (one pack only) |
 | **hallmark** | `install-agent-skills.sh` | UI taste gate — anti-AI-slop audit and greenfield design |
@@ -153,7 +153,7 @@ Buzz-native (`.agents/skills/`): `desktop-screenshot`, `sprout-cli`.
 | --- | --- |
 | OpenSpec (`@fission-ai/openspec`) | Spec-driven change proposals (`openspec/` in repo) |
 | Graphify (`graphifyy`) | Code graph when `uv` + `graphify install --project --platform cursor` succeed |
-| Context7 MCP | Copy `.cursor/mcp.json.example` → `~/.cursor/mcp.json` or merge locally; set `CONTEXT7_API_KEY` if using the hosted endpoint |
+| Context7 MCP | Copy `.cursor/mcp.json.example` → `~/.cursor/mcp.json` or merge locally; uses `npx @upstash/context7-mcp` (stdio) |
 | Serena (optional) | Semantic code intelligence — not installed by default |
 
 **Agent-browser CLI** (`./scripts/setup-agent-stack.sh`): live Playwright automation (pairs with `agent-browser` skill).
