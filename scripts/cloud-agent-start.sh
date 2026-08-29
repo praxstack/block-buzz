@@ -71,16 +71,19 @@ echo "[cloud-agent-start] Starting core dev services (postgres, redis, minio, ad
 docker compose up -d postgres redis minio adminer
 
 echo -n "[cloud-agent-start] Waiting for Postgres and Redis"
+ready=0
 for _ in $(seq 1 40); do
   pg=$(docker inspect --format '{{.State.Health.Status}}' buzz-postgres 2>/dev/null || echo not_found)
   redis=$(docker inspect --format '{{.State.Health.Status}}' buzz-redis 2>/dev/null || echo not_found)
   if [[ "${pg}" == "healthy" && "${redis}" == "healthy" ]]; then
     echo " ready"
+    ready=1
     break
   fi
   echo -n "."
   sleep 3
-else
+done
+if [[ "${ready}" -ne 1 ]]; then
   echo " timed out" >&2
   exit 1
 fi
