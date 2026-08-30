@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson 0001 — What Is the Agent Stack?</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+
+<nav class="breadcrumb"><a href="../MISSION.md">Mission</a> · Lesson 0001</nav>
+
+<h1>Lesson 0001: What Is the Agent Stack?</h1>
+<p class="meta">Estimated read: 10 minutes</p>
+
+<h2>The one-sentence version</h2>
+<p>
+  The agent stack is everything in this fork that helps AI agents (and you) build Buzz
+  reliably: pinned toolchain, Cloud Agent VM scripts, 380+ Cursor skills, and workflow prompts
+  that chain those skills into discover → spec → plan → build → review → ship.
+</p>
+
+<h2>Three layers</h2>
+
+<div class="card">
+  <h3>1. Runtime environment</h3>
+  <p>Docker, Postgres, Redis, Hermit-pinned Rust/Node/Flutter, relay and desktop build deps.</p>
+  <pre>scripts/cloud-agent-install.sh   # once per snapshot
+scripts/cloud-agent-start.sh     # every boot
+.cursor/environment.json         # wires install + terminals</pre>
+</div>
+
+<div class="card">
+  <h3>2. Skills library</h3>
+  <p>Specialized instructions the agent reads when invoked. Installed to <code>.cursor/skills/</code>.</p>
+  <pre>./scripts/install-agent-skills.sh      # gstack, wshobson, superpowers, …
+./scripts/install-praxstack-skills.sh  # constellation-team, personas</pre>
+</div>
+
+<div class="card">
+  <h3>3. Workflows and personas</h3>
+  <p>Human- or agent-pasted prompts that orchestrate skills for a lifecycle phase.</p>
+  <pre>docs/agents/workflows/praxstack/high-end-operator/
+docs/agents/personas/praxstack/md-personas/</pre>
+</div>
+
+<h2>How a task flows</h2>
+<table>
+  <thead>
+    <tr><th>Phase</th><th>Example skill / workflow</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Discover repo</td><td><code>find-skills</code>, <code>acquire-codebase-knowledge</code></td></tr>
+    <tr><td>Clarify requirements</td><td><code>interrogate</code>, <code>brainstorming</code>, praxstack <code>ALIGN.md</code></td></tr>
+    <tr><td>Plan</td><td><code>writing-plans</code>, <code>ce-plan</code>, OpenSpec propose</td></tr>
+    <tr><td>Implement</td><td><code>poteto-mode</code>, <code>test-driven-development</code></td></tr>
+    <tr><td>Review</td><td>gstack <code>review</code>, <code>code-review-excellence</code></td></tr>
+    <tr><td>Ship</td><td>gstack <code>ship</code>, <code>LAND.md</code> workflow</td></tr>
+    <tr><td>Learn</td><td><code>ce-compound</code>, <code>LEARN.md</code></td></tr>
+  </tbody>
+</table>
+
+<h2>Rules that prevent pain</h2>
+<ul>
+  <li><strong>One methodology per task.</strong> Do not load multiple orchestrators.</li>
+  <li><strong>Activate Hermit first.</strong> <code>. ./bin/activate-hermit</code></li>
+  <li><strong>Buzz product code ≠ agent stack.</strong> Upstream CI (desktop E2E) can flake independently of skill changes.</li>
+  <li><strong>Save Cloud Agent environment</strong> in Cursor Portal after validating install.</li>
+</ul>
+
+<h2>Try it now</h2>
+<pre>. ./bin/activate-hermit
+cp .env.example .env
+just setup
+just relay          # terminal 1
+just desktop-dev    # terminal 2
+find .cursor/skills -name SKILL.md | wc -l</pre>
+
+<p>
+  <a href="../reference/glossary.html">Glossary</a> ·
+  <a href="../RESOURCES.md">Resources</a> ·
+  <a href="../learning-records/0001-session-bootstrap.md">Session record</a>
+</p>
+
+</body>
+</html>

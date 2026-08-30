@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project Status and Environment Report — praxstack/block-buzz</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, sans-serif; line-height: 1.5; max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { border-bottom: 2px solid #ccc; padding-bottom: 0.25rem; }
+    h2 { margin-top: 1.75rem; border-bottom: 1px solid #ddd; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #ccc; padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f4f4f4; }
+    .ok { color: #0a7; }
+    .warn { color: #c80; }
+    .bad { color: #c22; }
+    .meta { color: #666; font-size: 0.9rem; }
+    ul { padding-left: 1.25rem; }
+    code { font-size: 0.9em; }
+  </style>
+</head>
+<body>
+
+<h1>Project Status and Environment Report</h1>
+<p class="meta">Repository: <code>praxstack/block-buzz</code> (fork of <code>block/buzz</code>) &middot; Updated: 2026-08-30 16:30 UTC &middot; Workspace: <code>/workspace</code></p>
+
+<h2>Overall Status Summary</h2>
+<p>
+  Agent stack prototype is <strong>on <code>main</code></strong>. PR <strong>#9</strong> (praxstack skills, personas, workflows) was
+  <span class="ok">merged</span> 2026-08-30 16:24 UTC (commit <code>a12d71b5</code>). Cloud Agent environment, gstack, 2026 curated packs,
+  and praxstack content are all present. Teaching workspace lives at <code>docs/learn-agent-stack/</code>.
+  Branch <code>deb</code>, <code>dev</code>, and <code>prax/gstack-setup-533e</code> <strong>do not exist</strong> in this fork.
+  Current checkout: <code>main</code>.
+</p>
+
+<h2>Completed Items</h2>
+<ul>
+  <li><strong>Cloud Agent environment</strong> — <code>.cursor/environment.json</code>, Dockerfile, install/start scripts wired.</li>
+  <li><strong>PR #9 merged</strong> — 19 praxstack skills, 8 personas, high-end-operator + project-alignment workflows.</li>
+  <li><strong>PRs #3–#8 merged</strong> — skills library, cloud hardening, gstack fix, improve plans.</li>
+  <li><strong>2026 agent stack on main</strong> — OpenSpec, Graphify, Context7 template, wshobson subsets, last30days, deep-research.</li>
+  <li><strong>Teaching workspace</strong> — <code>docs/learn-agent-stack/</code> with mission, lesson 0001, glossary, session record.</li>
+  <li><strong>381 skills</strong> on <code>main</code> (<code>.cursor/skills/**/SKILL.md</code>).</li>
+</ul>
+
+<h2>Pending Items</h2>
+<ul>
+  <li><strong>PR #2</strong> — still open as <strong>draft</strong>, conflicting with <code>main</code>; superseded. Close manually (token cannot close PRs).</li>
+  <li><strong>PR #1</strong> — ImgBot; unrelated bot PR.</li>
+  <li><strong>Main Docker image + Sprig workflows</strong> — failed on prior main pushes; CI workflow itself green. Post-merge runs in progress.</li>
+  <li><strong>Cursor environment Save</strong> — user must publish in Cursor Portal.</li>
+</ul>
+
+<h2>User Action Required</h2>
+<ul>
+  <li><strong>Close PR #2</strong> — superseded by merged work; integration token lacks <code>closePullRequest</code> permission.</li>
+  <li><strong>CodeRabbit</strong> — run <code>coderabbit auth login</code> for local reviews.</li>
+  <li><strong>Context7 MCP</strong> — copy <code>.cursor/mcp.json.example</code>, set <code>CONTEXT7_API_KEY</code>.</li>
+  <li><strong>Save Cloud Agent environment</strong> in Cursor dashboard after next green build.</li>
+  <li><strong>buzz-voice tests</strong> — install <code>libstdc++</code> dev package if voice crate tests needed locally.</li>
+</ul>
+
+<h2>Why the user saw the wrong branch</h2>
+<p>
+  Cloud Agents <strong>resume on the branch from the prior agent run</strong>, not automatically on <code>main</code>.
+  A screenshot showing <code>prax/gstack-setup-533e</code> was likely from a different session or naming convention;
+  that branch does not exist in <code>praxstack/block-buzz</code>. This VM started on
+  <code>prax/praxstack-skills-personas-a3ec</code> (PR #9 work). Multitask "Working 1" indicates a
+  background subagent, not a git branch.
+</p>
+
+<h2>PR Merge Status</h2>
+<table>
+  <thead>
+    <tr><th>#</th><th>Title</th><th>State</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>[ImgBot] Optimize images</td><td class="warn">OPEN</td><td>Bot PR</td></tr>
+    <tr><td>2</td><td>feat(cloud): Cloud Agent environment</td><td class="warn">OPEN (draft)</td><td class="bad">Superseded — close manually</td></tr>
+    <tr><td>3–8</td><td>Skills, cloud fixes, gstack</td><td class="ok">MERGED</td><td>2026-08-29</td></tr>
+    <tr><td>9</td><td>feat(agents): praxstack skills/personas/workflows</td><td class="ok">MERGED</td><td>2026-08-30 16:24 UTC</td></tr>
+  </tbody>
+</table>
+
+<h2>CI Status (main)</h2>
+<table>
+  <thead>
+    <tr><th>Workflow</th><th>Last known</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>CI</td><td class="ok">SUCCESS</td> (pre-merge push <code>f2e9e42d</code>)</td></tr>
+    <tr><td>Docker image</td><td class="bad">FAILURE</td> (prior push; re-run after #9 merge in progress)</td></tr>
+    <tr><td>Sprig</td><td class="bad">FAILURE</td> (prior push; re-run in progress)</td></tr>
+    <tr><td>helm chart</td><td class="ok">SUCCESS</td></tr>
+  </tbody>
+</table>
+
+<h2>Environment Freshness</h2>
+<table>
+  <thead>
+    <tr><th>Artifact</th><th>Status</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Last <code>main</code> commit</td><td><code>a12d71b5</code> — PR #9 merge</td></tr>
+    <tr><td>Skills count</td><td>381 on <code>main</code></td></tr>
+    <tr><td>Teaching workspace</td><td><code>docs/learn-agent-stack/</code></td></tr>
+    <tr><td><code>.cursor/mcp.json</code></td><td class="warn">Missing</td> (example template only)</td></tr>
+  </tbody>
+</table>
+
+<p class="meta">Report: <code>docs/project-status-report.html</code></p>
+
+</body>
+</html>

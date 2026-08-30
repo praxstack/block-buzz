@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Glossary — Agent Stack</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+
+<nav class="breadcrumb"><a href="../MISSION.md">Mission</a> · Glossary</nav>
+
+<h1>Agent Stack Glossary</h1>
+<p class="meta">praxstack/block-buzz · reference</p>
+
+<dl>
+  <dt>Agent stack</dt>
+  <dd>The curated set of skills, workflows, MCP servers, and Cloud Agent scripts that turn this Buzz fork into an agent-first development environment.</dd>
+
+  <dt>Skill</dt>
+  <dd>A <code>SKILL.md</code> file under <code>.cursor/skills/</code> that teaches Cursor how to perform a specialized task (review, TDD, research, etc.).</dd>
+
+  <dt>Persona</dt>
+  <dd>A role-voice prompt (e.g. FRONTEND-PE) under <code>docs/agents/personas/</code>. Complements skills with tone and perspective, not full methodology.</dd>
+
+  <dt>Workflow prompt</dt>
+  <dd>Paste-ready goal text under <code>docs/agents/workflows/praxstack/</code> (e.g. high-end-operator). Invokes installed skills by name.</dd>
+
+  <dt>gstack</dt>
+  <dd>Review/ship/compound-engineering skill family. Use for code review, landing PRs, and post-ship learning loops.</dd>
+
+  <dt>pstack / poteto-mode</dt>
+  <dd>Planning and execution orchestration. One methodology per task — do not combine with competing orchestrators.</dd>
+
+  <dt>praxstack</dt>
+  <dd>Personal skill/persona portfolio (constellation-team, spec-creator, high-end-operator workflows).</dd>
+
+  <dt>Hermit</dt>
+  <dd>Pinning toolchain manager. Activate with <code>. ./bin/activate-hermit</code> before Rust/Node/Flutter commands.</dd>
+
+  <dt>Cloud Agent environment</dt>
+  <dd>Cursor-managed VM defined by <code>.cursor/environment.json</code>, Dockerfile, and install/start scripts.</dd>
+
+  <dt>OpenSpec</dt>
+  <dd>Spec-driven change workflow. Proposals live under <code>openspec/</code> when used.</dd>
+
+  <dt>Graphify</dt>
+  <dd>Code graph tool for structural navigation. Installed via <code>install-repo-intelligence.sh</code>.</dd>
+
+  <dt>Context7 MCP</dt>
+  <dd>MCP server for up-to-date library documentation. Requires <code>CONTEXT7_API_KEY</code>.</dd>
+
+  <dt>One methodology per task</dt>
+  <dd>Rule: pick one planning/review orchestrator per session. Stacking kingmode + gstack + superpowers causes context rot.</dd>
+
+  <dt>Buzz-native skills</dt>
+  <dd>Fork-specific skills in <code>.agents/skills/</code> (desktop-screenshot, sprout-cli). Symlinked into <code>.cursor/skills/</code>.</dd>
+
+  <dt>skills-lock.json</dt>
+  <dd>Manifest tracking vendored skill versions for reproducible installs.</dd>
+</dl>
+
+<p><a href="../lessons/0001-what-is-the-agent-stack.html">Next: Lesson 0001 →</a></p>
+
+</body>
+</html>
