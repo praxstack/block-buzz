@@ -1470,6 +1470,120 @@
       "sourceType": "github",
       "skillPath": "plugins/zeroize-audit/skills/zeroize-audit/SKILL.md",
       "computedHash": "86cb57ef77ebd66805a0f7a71a746e23b3f25d4e019be5ab736c4a66b818396c"
+    },
+    "constellation-team": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "new-skills/constellation-team/SKILL.md",
+      "computedHash": "edd6f341d860bd1e03da564c2d2c4f7b22b6c3aa93ce529c4e3c01cb360073f9"
+    },
+    "principal-engineer": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "new-skills/principal-engineer/SKILL.md",
+      "computedHash": "5f28664223fe91d05b03d5523b18b193fac6255466c440886aae494a74e15186"
+    },
+    "backend-system-design-expert": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "new-skills/backend-system-design-expert/SKILL.md",
+      "computedHash": "7e86c4b6e520857d64751bf3d3c1bac8e5ea86a9b15e8ce270484a9fe941eefc"
+    },
+    "qa-security-engineer": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "new-skills/qa-security-engineer/SKILL.md",
+      "computedHash": "3863ac17f55c4a0190322f91675e5b2013b1de5e3bbd571faab87928e187133e"
+    },
+    "devops-sre-engineer": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "new-skills/devops-sre-engineer/SKILL.md",
+      "computedHash": "fef4cc5933d8c806cd67926baeea668393a9868808b72cc448899cf74d3a16c9"
+    },
+    "frontend-uiux-designer": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "new-skills/frontend-uiux-designer/SKILL.md",
+      "computedHash": "8bb70d263c96d952a0f80bea4530b73fa7af48eaea692e0670949b9b5372bf12"
+    },
+    "product-manager": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "new-skills/product-manager/SKILL.md",
+      "computedHash": "6f854f2b3e13ce7b7501eb5cb234473a4fdfe962423aa379a200dd05c9dd26eb"
+    },
+    "backend-architecture-standards": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "new-skills/backend-architecture-standards/SKILL.md",
+      "computedHash": "53aace3d80de76c6472d1e75f575799aedb9eefa46c47729a270983cb485eb13"
+    },
+    "frontend-excellence-standards": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "new-skills/frontend-excellence-standards/SKILL.md",
+      "computedHash": "acdc4dea41ac0b84e68d019224426c915a3009ad3d011fc389249e5e7f885eb9"
+    },
+    "security-compliance-standards": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "new-skills/security-compliance-standards/SKILL.md",
+      "computedHash": "91d2257df27ae81e79714d26315753d0249d8f081ede39551ef00a026e9bf1ae"
+    },
+    "backend-pe": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "new-skills/backend-pe/SKILL.md",
+      "computedHash": "438c1b0d0bd669e5650f024303d028c8abcb5bffaa99c15e61450e63f6df6a3f"
+    },
+    "backend-pe-typescript": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "new-skills/backend-pe-typescript/SKILL.md",
+      "computedHash": "9e5f6f4aeae05ab609c40759bbff3f0402724671c9f29e58a0a314afa7106e12"
+    },
+    "frontend-pe": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "new-skills/frontend-pe/SKILL.md",
+      "computedHash": "77a37b3ad9a20a0421dc85618ebf11a09ba2c3295cec983da4082a5aa9b32019"
+    },
+    "spec-creator": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "new-skills/spec-creator/SKILL.md",
+      "computedHash": "c14d233cc041d8716e902c77507a92b7375d4f5dcaae8c2ee8fcf5b3d2c7adee"
+    },
+    "blueprint-creator": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "new-skills/blueprint-creator/SKILL.md",
+      "computedHash": "6512f97e59644661e263a33d64ccd133850b729fae25e1b957d21e6543f7e80a"
+    },
+    "frontend-design-excellence": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "new-skills/frontend-design-excellence/SKILL.md",
+      "computedHash": "6210c5b6a55374dc0438867a6fedc133fd3f60b6cfcc2f9bd01ac2003f6dd3c3"
+    },
+    "coding-agent-leadership-principles": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "skills/coding-agent-leadership-principles/SKILL.md",
+      "computedHash": "a40b63504ce6ea2460a2bf8dc15414f925a4be7e256f6ac6010c510bfb44213f"
+    },
+    "cross-agent-handoff": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "skills/cross-agent-handoff/SKILL.md",
+      "computedHash": "599106ad16a998224de6189fe9880d8763bc8d4611f9da6848e0539105f8ef89"
+    },
+    "superimprove": {
+      "source": "praxstack/skills-and-personas",
+      "sourceType": "github",
+      "skillPath": "skills/superimprove/SKILL.md",
+      "computedHash": "b9aa1d39d0a5c1ff9f091481736ed982a8d5a006eab90cb1b76f1dd6d18f688f"
     }
   }
 }

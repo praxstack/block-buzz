@@ -102,6 +102,9 @@ else
   echo "[install-agent-skills] Skipping spec-kit (uv not found — install from https://docs.astral.sh/uv/)" >&2
 fi
 
+echo "[install-agent-skills] Installing praxstack personal skills, personas, workflows..."
+"${REPO_ROOT}/scripts/install-praxstack-skills.sh"
+
 echo "[install-agent-skills] Installing gstack (review/QA/ship/plan workflows)..."
 "${REPO_ROOT}/scripts/install-gstack-skills.sh"
 
@@ -141,7 +144,8 @@ echo "  2. Run /setup-pstack to write ~/.cursor/rules/pstack-models.mdc"
 echo "  3. Repo intelligence: ./scripts/install-repo-intelligence.sh"
 echo "  4. Full agent stack (+ agent-browser CLI): ./scripts/setup-agent-stack.sh"
 echo "  5. gstack refresh (if skills are stale): ./scripts/install-gstack-skills.sh"
-echo "  6. Spec Kit full project scaffold (optional — skills already vendored):"
+echo "  6. praxstack personal refresh: ./scripts/install-praxstack-skills.sh"
+echo "  7. Spec Kit full project scaffold (optional — skills already vendored):"
 echo "       uv tool install specify-cli --from git+https://github.com/github/spec-kit.git"
 echo "       specify init --here --integration cursor-agent --integration-options=\"--skills\""
 echo ""
