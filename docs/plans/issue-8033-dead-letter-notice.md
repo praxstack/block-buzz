@@ -24,3 +24,8 @@ the user's request with no channel message.
 - `requeue` parks a journal record at the dead-letter threshold
 - panic recovery with `MAX_RETRIES` already spent parks the batch and does
   not leave undispatched work
+- panic recovery with a `RestClient` returns a joinable notice task that
+  `POST`s `/events` with the panic dead-letter copy (including last-message
+  preview); all-agents-dead exit joins that task before breaking
+- in-memory journal of event ids is the parking record, not a second
+  durable store of full events — expanding that is out of scope here
