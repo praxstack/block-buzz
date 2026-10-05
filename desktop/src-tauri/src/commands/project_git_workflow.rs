@@ -680,6 +680,16 @@ mod tests {
     use nostr::{Event, JsonUtil, Keys, Timestamp};
 
     #[test]
+    fn merge_git_auth_forwards_owner_auth_tag() {
+        let src = include_str!("project_git_workflow.rs");
+        let needle = format!("{}{}", ".with_auth_tag(owner_identity", ".auth_tag)");
+        assert!(
+            src.contains(&needle),
+            "merge git auth must forward the project owner auth tag"
+        );
+    }
+
+    #[test]
     fn empty_clone_uses_requested_default_branch() {
         let auth = build_test_git_auth_config().expect("build test git config");
         let repo = tempfile::tempdir().expect("create repository");

@@ -470,6 +470,27 @@ mod tests {
     }
 
     #[test]
+    fn run_git_applies_credential_process_env_to_the_command() {
+        let src = include_str!("project_git_exec.rs");
+        let configure = format!(
+            "{}{}",
+            "configure_git_auth(&mut command, auth, ", "needs_credentials)"
+        );
+        let apply = format!(
+            "{}{}",
+            "for (key, value) in credential_process_env", "(auth)"
+        );
+        assert!(
+            src.contains(&configure),
+            "run_git must configure auth on the git command"
+        );
+        assert!(
+            src.contains(&apply),
+            "configure_git_auth must apply credential_process_env onto the git command"
+        );
+    }
+
+    #[test]
     fn credential_helper_config_value_uses_forward_slashes() {
         let path =
             std::path::PathBuf::from(r"C:\Users\x\AppData\Local\Buzz\git-credential-nostr.exe");
