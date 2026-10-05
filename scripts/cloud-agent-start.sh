@@ -25,14 +25,48 @@ resolve_dockerd_bin() {
   return 1
 }
 
+# JIT Cloud Agent images sometimes omit docker.io even when Dockerfile
+# lists it. Install from apt once so start can recover instead of exiting.
+root_env() {
+  if [[ "$(id -u)" -eq 0 ]]; then
+    env "$@"
+  elif command -v sudo >/dev/null 2>&1; then
+    sudo env "$@"
+  else
+    echo "[cloud-agent-start] need root or sudo to run: $*" >&2
+    exit 1
+  fi
+}
+
+install_docker_packages_if_missing() {
+  if resolve_dockerd_bin >/dev/null; then
+    return 0
+  fi
+  if ! command -v apt-get >/dev/null 2>&1; then
+    echo "[cloud-agent-start] dockerd not found and apt-get is unavailable; install docker.io in the image" >&2
+    exit 1
+  fi
+  echo "[cloud-agent-start] dockerd not found; installing docker.io via apt-get..."
+  root_env DEBIAN_FRONTEND=noninteractive apt-get update -qq
+  root_env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    docker.io docker-compose-v2 fuse-overlayfs
+  hash -r || true
+  if ! resolve_dockerd_bin >/dev/null; then
+    echo "[cloud-agent-start] docker.io install finished but dockerd is still missing" >&2
+    exit 1
+  fi
+}
+
 ensure_docker() {
   if docker info >/dev/null 2>&1; then
     return 0
   fi
 
+  install_docker_packages_if_missing
+
   local dockerd_bin
   dockerd_bin="$(resolve_dockerd_bin)" || {
-    echo "[cloud-agent-start] dockerd not found; install docker.io in the image" >&2
+    echo "[cloud-agent-start] dockerd not found after install attempt" >&2
     exit 1
   }
 
