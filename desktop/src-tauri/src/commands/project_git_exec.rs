@@ -48,7 +48,15 @@ pub(crate) struct GitAuthConfig {
     git_path: std::path::PathBuf,
     credential_helper: Option<std::path::PathBuf>,
     nsec: String,
+    auth_tag: Option<String>,
     allow_file_transport: bool,
+}
+
+impl GitAuthConfig {
+    pub(crate) fn with_auth_tag(mut self, auth_tag: Option<String>) -> Self {
+        self.auth_tag = auth_tag.filter(|tag| !tag.is_empty());
+        self
+    }
 }
 
 fn read_pipe_lossy(pipe: Option<impl Read>) -> String {
@@ -139,6 +147,8 @@ fn configure_git_auth(command: &mut Command, auth: &GitAuthConfig, needs_credent
         "GIT_ALTERNATE_OBJECT_DIRECTORIES",
         "GIT_SSH_COMMAND",
         "GIT_EXTERNAL_DIFF",
+        "BUZZ_AUTH_TAG",
+        "NOSTR_PRIVATE_KEY",
     ] {
         command.env_remove(key);
     }
@@ -172,7 +182,9 @@ fn configure_git_auth(command: &mut Command, auth: &GitAuthConfig, needs_credent
         let Some(cred_helper) = &auth.credential_helper else {
             return apply_git_config(command, &entries);
         };
-        command.env("NOSTR_PRIVATE_KEY", &auth.nsec);
+        for (key, value) in credential_process_env(auth) {
+            command.env(key, value);
+        }
         entries.push((
             "credential.helper",
             credential_helper_config_value(cred_helper),
@@ -180,6 +192,15 @@ fn configure_git_auth(command: &mut Command, auth: &GitAuthConfig, needs_credent
         entries.push(("credential.useHttpPath", "true".to_string()));
     }
     apply_git_config(command, &entries);
+}
+
+/// Environment handed to `git-credential-nostr` for NIP-98 (+ optional NIP-OA).
+fn credential_process_env(auth: &GitAuthConfig) -> Vec<(String, String)> {
+    let mut env = vec![("NOSTR_PRIVATE_KEY".to_string(), auth.nsec.clone())];
+    if let Some(tag) = auth.auth_tag.as_deref().filter(|tag| !tag.is_empty()) {
+        env.push(("BUZZ_AUTH_TAG".to_string(), tag.to_string()));
+    }
+    env
 }
 
 /// Format a path for git `credential.helper`.
@@ -213,6 +234,7 @@ pub(crate) fn build_git_clone_auth_config(
                 .ok_or_else(|| "git was not found on PATH".to_string())?,
             credential_helper: None,
             nsec: String::new(),
+            auth_tag: None,
             allow_file_transport: false,
         });
     }
@@ -230,6 +252,7 @@ pub(crate) fn build_git_auth_config_for_keys(keys: &Keys) -> Result<GitAuthConfi
         git_path,
         credential_helper,
         nsec,
+        auth_tag: None,
         allow_file_transport: false,
     })
 }
@@ -393,10 +416,58 @@ fn validate_clone_url_against_relay(clone_url: &str, relay_base: &str) -> Result
 #[cfg(test)]
 mod tests {
     use super::{
-        clean_branch, clean_target_ref, credential_helper_config_value, git_needs_credentials,
-        git_subcommand, validate_clone_url, validate_clone_url_against_relay,
-        validate_local_clone_url,
+        clean_branch, clean_target_ref, credential_helper_config_value, credential_process_env,
+        git_needs_credentials, git_subcommand, validate_clone_url,
+        validate_clone_url_against_relay, validate_local_clone_url, GitAuthConfig,
     };
+
+    #[test]
+    fn credential_process_env_sets_auth_tag_only_when_present() {
+        let without_tag = GitAuthConfig {
+            git_path: "git".into(),
+            credential_helper: None,
+            nsec: "nsec1test".into(),
+            auth_tag: None,
+            allow_file_transport: false,
+        };
+        assert_eq!(
+            credential_process_env(&without_tag),
+            vec![("NOSTR_PRIVATE_KEY".into(), "nsec1test".into())]
+        );
+
+        let with_tag = GitAuthConfig {
+            git_path: "git".into(),
+            credential_helper: None,
+            nsec: "nsec1test".into(),
+            auth_tag: None,
+            allow_file_transport: false,
+        }
+        .with_auth_tag(Some(r#"["auth","owner","","sig"]"#.into()));
+        let env = credential_process_env(&with_tag);
+        assert_eq!(env.len(), 2);
+        assert_eq!(env[0], ("NOSTR_PRIVATE_KEY".into(), "nsec1test".into()));
+        assert_eq!(
+            env[1],
+            (
+                "BUZZ_AUTH_TAG".into(),
+                r#"["auth","owner","","sig"]"#.into()
+            )
+        );
+
+        let empty_tag = GitAuthConfig {
+            git_path: "git".into(),
+            credential_helper: None,
+            nsec: "nsec1test".into(),
+            auth_tag: Some("stale".into()),
+            allow_file_transport: false,
+        }
+        .with_auth_tag(Some(String::new()));
+        assert_eq!(empty_tag.auth_tag, None);
+        assert_eq!(
+            credential_process_env(&empty_tag),
+            vec![("NOSTR_PRIVATE_KEY".into(), "nsec1test".into())]
+        );
+    }
 
     #[test]
     fn credential_helper_config_value_uses_forward_slashes() {

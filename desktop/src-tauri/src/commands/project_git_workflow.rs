@@ -537,7 +537,8 @@ pub async fn merge_project_pull_request(
         &pull_request_id,
         &pull_request_author,
     )?;
-    let auth = build_git_auth_config_for_keys(&owner_identity.keys)?;
+    let auth = build_git_auth_config_for_keys(&owner_identity.keys)?
+        .with_auth_tag(owner_identity.auth_tag);
 
     let git_result = tauri::async_runtime::spawn_blocking(
         move || -> Result<ProjectRepoMergeGitResult, ProjectPullRequestMergeError> {
