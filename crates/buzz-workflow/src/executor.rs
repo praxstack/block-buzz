@@ -702,8 +702,13 @@ pub async fn dispatch_action(
 
                     #[cfg(feature = "reqwest")]
                     {
-                        let result = call_webhook_impl(url, method_str, headers, body).await?;
-                        Ok(StepResult::Completed(result))
+                        // Webhook transport failures complete this step with
+                        // status 0 so later steps still run (#8016). SSRF
+                        // denials stay in that output; they must not abort the
+                        // rest of the workflow.
+                        Ok(completed_webhook_step(
+                            call_webhook_impl(url, method_str, headers, body).await,
+                        ))
                     }
 
                     #[cfg(not(feature = "reqwest"))]
@@ -827,12 +832,77 @@ pub(crate) fn parse_duration_secs(duration: &str) -> Result<u64, WorkflowError> 
 
 // is_private_ip is provided by buzz_core::network::is_private_ip
 
+/// Complete a webhook step without aborting the rest of the workflow.
+///
+/// Transport failures (DNS, SSRF, TLS, HTTP) become a `{status: 0, error}`
+/// output so later steps can still run and read `{{steps.<id>.status}}`.
+fn completed_webhook_step(result: Result<JsonValue, WorkflowError>) -> StepResult {
+    match result {
+        Ok(output) => StepResult::Completed(output),
+        Err(error) => {
+            warn!("CallWebhook failed; continuing remaining steps: {error}");
+            StepResult::Completed(webhook_error_output(&error))
+        }
+    }
+}
+
+fn webhook_error_output(error: &WorkflowError) -> JsonValue {
+    serde_json::json!({
+        "status": 0,
+        "body": serde_json::Value::Null,
+        "error": error.to_string(),
+    })
+}
+
+/// Reject mixed public+private DNS answers (SSRF / rebinding). Prefer IPv4
+/// among remaining public addresses so dual-stack hosts do not pin to a
+/// broken AAAA record.
+fn select_ssrf_pin_ip(
+    host: &str,
+    addrs: &[std::net::IpAddr],
+) -> Result<std::net::IpAddr, WorkflowError> {
+    if addrs.is_empty() {
+        return Err(WorkflowError::WebhookError(
+            "DNS resolution returned no addresses".into(),
+        ));
+    }
+
+    for ip in addrs {
+        if buzz_core::network::is_private_ip(ip) {
+            return Err(WorkflowError::WebhookError(format!(
+                "SSRF blocked: '{host}' resolved to private/reserved address {ip}"
+            )));
+        }
+    }
+
+    Ok(addrs
+        .iter()
+        .copied()
+        .find(std::net::IpAddr::is_ipv4)
+        .unwrap_or(addrs[0]))
+}
+
+fn json_body_needs_content_type(
+    headers: &Option<std::collections::HashMap<String, String>>,
+    body: &str,
+) -> bool {
+    let has_content_type = headers.as_ref().is_some_and(|hdrs| {
+        hdrs.keys()
+            .any(|key| key.eq_ignore_ascii_case("content-type"))
+    });
+    if has_content_type {
+        return false;
+    }
+    let trimmed = body.trim_start();
+    trimmed.starts_with('{') || trimmed.starts_with('[')
+}
+
 /// Resolve `host` to IP addresses and reject if any are private/reserved.
 ///
 /// Uses the OS resolver (blocking, run on a threadpool via `spawn_blocking`).
 /// Rejects the request if DNS resolution fails or returns zero addresses.
 ///
-/// Returns the first validated IP address so the caller can pin DNS resolution
+/// Returns a validated IP address so the caller can pin DNS resolution
 /// in the HTTP client, preventing DNS rebinding TOCTOU attacks.
 #[cfg(feature = "reqwest")]
 async fn check_ssrf(host: &str, port: u16) -> Result<std::net::IpAddr, WorkflowError> {
@@ -847,23 +917,9 @@ async fn check_ssrf(host: &str, port: u16) -> Result<std::net::IpAddr, WorkflowE
     .map_err(|e| WorkflowError::WebhookError(format!("SSRF check task failed: {e}")))?
     .map_err(|e| WorkflowError::WebhookError(format!("DNS resolution failed: {e}")))?;
 
-    if addrs.is_empty() {
-        return Err(WorkflowError::WebhookError(
-            "DNS resolution returned no addresses".into(),
-        ));
-    }
-
     debug!("Resolved webhook host '{}' → {:?}", host, addrs);
 
-    for ip in &addrs {
-        if buzz_core::network::is_private_ip(ip) {
-            return Err(WorkflowError::WebhookError(format!(
-                "SSRF blocked: '{host}' resolved to private/reserved address {ip}"
-            )));
-        }
-    }
-
-    Ok(addrs[0])
+    select_ssrf_pin_ip(host, &addrs)
 }
 
 /// Maximum response body size for webhook calls (1 MiB).
@@ -919,6 +975,9 @@ async fn call_webhook_impl(
     }
 
     if let Some(b) = body {
+        if json_body_needs_content_type(headers, b) {
+            req = req.header("Content-Type", "application/json");
+        }
         req = req.body(b.clone());
     }
 
@@ -1977,5 +2036,48 @@ mod tests {
             resolve_send_message_channel(Some(&override_channel_id.to_string()), "", None)
                 .expect("override should be accepted");
         assert_eq!(resolved, override_channel_id.to_string());
+    }
+
+    #[test]
+    fn select_ssrf_pin_ip_prefers_ipv4_among_public_addresses() {
+        let v4: std::net::IpAddr = "1.2.3.4".parse().unwrap();
+        let v6: std::net::IpAddr = "2606:4700::1".parse().unwrap();
+        assert_eq!(select_ssrf_pin_ip("example.com", &[v6, v4]).unwrap(), v4);
+        assert_eq!(select_ssrf_pin_ip("example.com", &[v6]).unwrap(), v6);
+    }
+
+    #[test]
+    fn select_ssrf_pin_ip_rejects_private_answers() {
+        let public: std::net::IpAddr = "1.1.1.1".parse().unwrap();
+        let loopback: std::net::IpAddr = "127.0.0.1".parse().unwrap();
+        let err = select_ssrf_pin_ip("evil.example", &[public, loopback]).unwrap_err();
+        assert!(
+            matches!(err, WorkflowError::WebhookError(ref msg) if msg.contains("SSRF blocked")),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn webhook_transport_failure_completes_step_with_status_zero() {
+        let result = completed_webhook_step(Err(WorkflowError::WebhookError(
+            "DNS resolution failed: failed to lookup address information".into(),
+        )));
+        match result {
+            StepResult::Completed(output) => {
+                assert_eq!(output["status"], 0);
+                assert!(output["error"].as_str().unwrap().contains("DNS resolution"));
+            }
+            other => panic!("expected completed step, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn json_body_gets_content_type_only_when_missing() {
+        let body = "{\"t\":\"/ping\"}";
+        assert!(json_body_needs_content_type(&None, body));
+        let mut headers = std::collections::HashMap::new();
+        headers.insert("Content-Type".into(), "text/plain".into());
+        assert!(!json_body_needs_content_type(&Some(headers), body));
+        assert!(!json_body_needs_content_type(&None, "not-json"));
     }
 }
