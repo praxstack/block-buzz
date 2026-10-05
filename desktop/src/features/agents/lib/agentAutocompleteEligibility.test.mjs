@@ -566,7 +566,7 @@ test("owners remain admitted by allowlist policy without listing themselves", ()
 });
 
 test("owned discovery does not require a shared channel, but sending does", () => {
-  for (const respondTo of ["owner-only", "allowlist", "anyone"]) {
+  for (const respondTo of ["owner-only", "allowlist", "anyone", null]) {
     const agent = {
       pubkey: PUB_B,
       ownerPubkey: CURRENT_PUBKEY,
@@ -583,6 +583,49 @@ test("owned discovery does not require a shared channel, but sending does", () =
       false,
     );
   }
+});
+
+test("relayAgentIsSharedWithUser: null respondTo admits owners and shared anyone channels", () => {
+  const sharedChannelIds = new Set(["general"]);
+  assert.equal(
+    relayAgentIsSharedWithUser(
+      {
+        ownerPubkey: CURRENT_PUBKEY,
+        respondTo: null,
+        respondToAllowlist: [],
+        channelIds: ["general"],
+      },
+      sharedChannelIds,
+      CURRENT_PUBKEY,
+    ),
+    true,
+  );
+  assert.equal(
+    relayAgentIsSharedWithUser(
+      {
+        ownerPubkey: OTHER_OWNER_PUBKEY,
+        respondTo: null,
+        respondToAllowlist: [],
+        channelIds: ["general"],
+      },
+      sharedChannelIds,
+      CURRENT_PUBKEY,
+    ),
+    true,
+  );
+  assert.equal(
+    relayAgentIsSharedWithUser(
+      {
+        ownerPubkey: OTHER_OWNER_PUBKEY,
+        respondTo: null,
+        respondToAllowlist: [],
+        channelIds: ["other"],
+      },
+      sharedChannelIds,
+      CURRENT_PUBKEY,
+    ),
+    false,
+  );
 });
 
 test("DM ownership is independent of local configuration and still requires membership", () => {

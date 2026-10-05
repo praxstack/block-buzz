@@ -22,6 +22,10 @@ export function getSharedChannelIds(channels: readonly Channel[] | undefined) {
   );
 }
 
+function isNobodyRespondTo(respondTo: unknown) {
+  return respondTo === "nobody";
+}
+
 export function relayAgentIsSharedWithUser(
   agent: Pick<
     RelayAgent,
@@ -36,10 +40,10 @@ export function relayAgentIsSharedWithUser(
 
   // Ownership is relay identity, not local key custody. Like the harness's
   // author gate, every supported policy except nobody admits the owner.
+  // `respondTo: null` is unset directory metadata on remote ACP agents, not
+  // a refusal — treat it like anyone for sharing, still never like nobody.
   if (
-    (agent.respondTo === "owner-only" ||
-      agent.respondTo === "allowlist" ||
-      agent.respondTo === "anyone") &&
+    !isNobodyRespondTo(agent.respondTo) &&
     normalizedCurrentPubkey &&
     agent.ownerPubkey &&
     normalizePubkey(agent.ownerPubkey) === normalizedCurrentPubkey
@@ -54,7 +58,7 @@ export function relayAgentIsSharedWithUser(
   }
 
   return (
-    agent.respondTo === "anyone" &&
+    (agent.respondTo === "anyone" || agent.respondTo == null) &&
     agent.channelIds.some((channelId) => sharedChannelIds.has(channelId))
   );
 }
