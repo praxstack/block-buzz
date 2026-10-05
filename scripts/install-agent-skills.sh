@@ -11,7 +11,14 @@ if ! command -v npx >/dev/null 2>&1; then
   exit 1
 fi
 
-SKILLS=(skills@latest)
+# Pin to a published npm version. `skills@latest` is a supply-chain moving
+# target (CodeRabbit). Bump this after reviewing the release notes.
+# Verified 2026-10-05: `npm view skills version` → 1.7.0
+SKILLS=(skills@1.7.0)
+if [[ "${SKILLS[*]}" == *latest* ]]; then
+  echo "Error: refuse unpinned skills@latest; set SKILLS to skills@<version>." >&2
+  exit 1
+fi
 
 # install_skillpack <repo> [--skill <name>|--skill '*'] [extra npx args...]
 install_skillpack() {
