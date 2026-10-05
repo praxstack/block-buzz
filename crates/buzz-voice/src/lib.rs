@@ -21,3 +21,12 @@ pub const APRIL_BUNDLE_ID: &str = pocket::APRIL_BUNDLE_ID;
 pub const APRIL_MODEL_ID: &str = pocket::APRIL_MODEL_ID;
 /// Pinned revision containing the April bundle.
 pub const APRIL_MODEL_REVISION: &str = pocket::APRIL_MODEL_REVISION;
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn linux_link_includes_voice_crate() {
+        assert!(!super::APRIL_BUNDLE_ID.is_empty());
+        assert!(!super::APRIL_MODEL_ID.is_empty());
+    }
+}

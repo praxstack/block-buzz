@@ -6,6 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Reusable local voice primitives for Buzz"
+build = "build.rs"
 
 [dependencies]
 atomic-write-file = "0.3"
