@@ -9,9 +9,9 @@ Status: APPROVED (design review round 1)
 
 ## Decision
 
-Add a package `build.rs` that, on `target_os = linux`, emits
-`-Wl,--no-as-needed` and `dylib=stdc++`. Do not put this in workspace
-`.cargo/config.toml` (would affect every crate).
+Package `build.rs` asks `g++ -print-file-name=libstdc++.so` for the
+GCC libdir (Hermit rust-lld does not search it), then emits
+`-Wl,--no-as-needed` and `dylib=stdc++` on Linux only.
 
 ## Tests
 
