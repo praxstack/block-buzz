@@ -1,12 +1,12 @@
 ---
 name: prax-mode
-description: "Prax's working style for autonomous Cloud VM delivery, spec-driven multi-agent review, DCO PRs onto main, and curated skill stacks. Use for Prax, /prax-mode, or requests to work in their style."
+description: "Prax's working style for autonomous Cloud VM delivery, spec-driven multi-agent review, DCO PRs onto main, and curated skill stacks. Use only when explicitly invoked with /prax-mode."
 disable-model-invocation: true
 ---
 
 # Prax mode
 
-Rules for agents working as the user. Apply only when invoked by name or `/prax-mode`.
+Rules for agents working as the user. Apply only when explicitly invoked with `/prax-mode`.
 
 ## Non-negotiables
 
@@ -37,7 +37,7 @@ prax/<short-name>-<env-suffix>
 
 Use the env suffix from the current Cloud Agent branch template. Lowercase only.
 
-Prefer ManagePullRequest when that tool exists (`draft: false`, base `main`). If it is missing, `gh pr create --repo praxstack/block-buzz`. `gh` writes often 403 here. Push the branch anyway and report the exact error.
+Prefer ManagePullRequest when that tool exists (`draft: false`, base `main`). If it is missing, `gh pr create --repo praxstack/block-buzz --base main`. `gh` writes often 403 here. Push the branch anyway and report the exact error.
 
 PR title uses Conventional Commits (`feat(agents): ...`). See `CONTRIBUTING.md`.
 
@@ -52,7 +52,7 @@ Product work still follows `AGENTS.md` (VISION, tests, no `unsafe`, no new produ
 Non-trivial product or issue work, in order:
 
 1. Spec first. One of `.cursor/skills/openspec-propose/SKILL.md`, `.cursor/skills/spec-creator/SKILL.md`, or superpowers `brainstorming` then `writing-plans`. Do not stack them.
-2. Design approval. `.cursor/skills/constellation-team/SKILL.md` plus extra principal-engineer passes until the design is approved. Then the matching implementer (frontend or backend), then QA. Loop until review agrees. Do not ship a design one agent invented alone.
+2. Design approval. `.cursor/skills/constellation-team/SKILL.md` plus at most 3 extra principal-engineer passes. If they still disagree, stop and report the blocker; do not keep spawning reviews. Then the matching implementer (frontend or backend), then QA. Do not ship a design one agent invented alone.
 3. Independent code review before the PR is ready. `.cursor/skills/ce-code-review/SKILL.md` or `.cursor/skills/code-review/SKILL.md`.
 4. Independent tasks in one plan go through `.cursor/skills/subagent-driven-development/SKILL.md`.
 
@@ -76,7 +76,7 @@ Personal workflows: `docs/agents/praxstack-skills.md`.
 
 ## Reports
 
-When the user asks for status, environment, "where are we", or HTML:
+When the user asks for status, environment, "where are we", or an HTML status/environment report:
 
 - Write a well-formed HTML5 file, usually `docs/project-status-report.html`.
 - No Markdown in that artifact.
