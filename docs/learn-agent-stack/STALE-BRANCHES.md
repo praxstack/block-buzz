@@ -7,12 +7,18 @@ Do not fight ImgBot. Leave `imgbot` / PR #1 alone.
 
 ## Safe to delete (merged or superseded)
 
-These remote branches have a merged or closed PR. After confirming
-`git merge-base --is-ancestor <sha> origin/main`, delete with:
+These remote branches had a merged or closed PR at inventory time. Do
+not trust the dated SHAs in this file. Fetch first, then confirm the
+**current** remote tip is already on `origin/main` before deleting:
 
 ```bash
-git push origin --delete <branch>
+git fetch origin main '<branch>'
+git merge-base --is-ancestor "origin/<branch>" origin/main
+git push origin --delete '<branch>'
 ```
+
+If the ancestor check fails, the branch has new unmerged commits — leave
+it alone and re-review.
 
 | Remote branch | Last commit | PR | Status |
 | --- | --- | --- | --- |
