@@ -30,3 +30,5 @@ the community write fence.
 
 - `select_ssrf_pin_ip` prefers IPv4, rejects mixed private answers
 - webhook failure output is `{status: 0, error}` so remaining steps can read it
+- `{{steps.hit.status}}` and `{{steps.hit.output.status}}` both interpolate
+- CallWebhook must not use `call_webhook_impl(...).await?` (would abort later steps)
