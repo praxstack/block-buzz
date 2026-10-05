@@ -24,3 +24,6 @@ today.
 - Script contains `install_docker_packages_if_missing` and no longer
   treats a missing binary as a hard "install it in the image" exit
   before attempting apt.
+- Skip-install requires dockerd, the compose plugin, and fuse-overlayfs.
+- `write_docker_daemon_json` runs before `apt-get install`.
+- Socket access is granted before `docker info` polling.
