@@ -15,4 +15,7 @@ Pin `SKILLS=(skills@1.7.0)` (current `npm view skills version` as of
 ## Tests
 
 - Script contains `skills@1.7.0` and not `skills@latest`.
-- Guard rejects a `latest` value (static review of the `if` check).
+- `scripts/test-install-agent-skills-pin.sh` copies the production script,
+  mutates the pin to `skills@latest`, and asserts the guard exits before a
+  fake `npx` on `PATH` is reached. Removing the `latest` check fails this
+  test.
