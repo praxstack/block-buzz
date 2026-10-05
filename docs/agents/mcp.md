@@ -9,5 +9,6 @@ commit API keys.
 The example pins `@upstash/context7-mcp@4.1.1` (`npm view` on 2026-10-05).
 Leave the version in the `npx` args; `@latest` is a moving tag.
 
-Context7 is optional. An empty or missing `CONTEXT7_API_KEY` is fine —
-the server is unused until a key is configured in the local MCP file.
+Context7 is optional. `@upstash/context7-mcp@4.1.1` starts without
+`CONTEXT7_API_KEY` and supports anonymous basic usage. The key is
+optional: it raises rate limits and enables private-repository access.
