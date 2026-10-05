@@ -1,7 +1,8 @@
 //! Sequential workflow executor.
 //!
 //! Responsibilities:
-//! - Template variable resolution (`{{trigger.X}}`, `{{steps.ID.output.X}}`)
+//! - Template variable resolution (`{{trigger.X}}`, `{{steps.ID.output.X}}`,
+//!   `{{steps.ID.X}}`)
 //! - Condition evaluation (`if:` expressions via `evalexpr`)
 //! - Sequential step dispatch
 //! - Execution trace updates in DB
@@ -63,7 +64,8 @@ impl TriggerContext {
     }
 }
 
-/// Resolve `{{trigger.X}}` and `{{steps.ID.output.X}}` placeholders in a string.
+/// Resolve `{{trigger.X}}`, `{{steps.ID.output.X}}`, and `{{steps.ID.X}}`
+/// placeholders in a string.
 ///
 /// Supports filters:
 /// - `| truncate(N)` — truncate to N characters
@@ -136,18 +138,15 @@ fn resolve_variable(
         return trigger_ctx.get_field(field).map(|s| s.to_owned());
     }
 
-    // Pattern: `steps.STEP_ID.output.FIELD`
+    // `steps.STEP_ID.output.FIELD` (documented) and `steps.STEP_ID.FIELD`
+    // (#8016 advertises `{{steps.hit.status}}`).
     if let Some(rest) = path.strip_prefix("steps.") {
-        let mut parts = rest.splitn(3, '.');
-        let step_id = parts.next()?;
-        let middle = parts.next()?; // must be "output"
-        let field = parts.next()?;
-
-        if middle != "output" {
+        let (step_id, field_path) = rest.split_once('.')?;
+        let output = step_outputs.get(step_id)?;
+        let field = field_path.strip_prefix("output.").unwrap_or(field_path);
+        if field.is_empty() {
             return None;
         }
-
-        let output = step_outputs.get(step_id)?;
         return json_get_str(output, field);
     }
 
@@ -219,6 +218,7 @@ fn apply_filter(value: String, filter: &str) -> Result<String, WorkflowError> {
 /// | `trigger.message_id`              | `trigger_message_id`      |
 /// | `trigger.is_reply`                | `trigger_is_reply` (bool) |
 /// | `steps.STEP_ID.output.FIELD`      | `steps_STEP_ID_output_FIELD` |
+/// | `steps.STEP_ID.FIELD`             | `steps_STEP_ID_FIELD`        |
 ///
 /// Also registers string helper functions that the `cron` crate's `evalexpr` v11
 /// does not include by default:
@@ -316,9 +316,12 @@ pub fn build_eval_context(
     for (step_id, output) in step_outputs {
         if let JsonValue::Object(map) = output {
             for (field, val) in map {
-                let var_name = format!("steps_{step_id}_output_{field}");
                 let eval_val = json_value_to_eval(val);
-                ctx.set_value(var_name, eval_val)
+                let documented = format!("steps_{step_id}_output_{field}");
+                ctx.set_value(documented, eval_val.clone())
+                    .map_err(|e| WorkflowError::ConditionError(e.to_string()))?;
+                let shorthand = format!("steps_{step_id}_{field}");
+                ctx.set_value(shorthand, eval_val)
                     .map_err(|e| WorkflowError::ConditionError(e.to_string()))?;
             }
         }
@@ -702,8 +705,13 @@ pub async fn dispatch_action(
 
                     #[cfg(feature = "reqwest")]
                     {
-                        let result = call_webhook_impl(url, method_str, headers, body).await?;
-                        Ok(StepResult::Completed(result))
+                        // Webhook transport failures complete this step with
+                        // status 0 so later steps still run (#8016). SSRF
+                        // denials stay in that output; they must not abort the
+                        // rest of the workflow.
+                        Ok(completed_webhook_step(
+                            call_webhook_impl(url, method_str, headers, body).await,
+                        ))
                     }
 
                     #[cfg(not(feature = "reqwest"))]
@@ -827,12 +835,77 @@ pub(crate) fn parse_duration_secs(duration: &str) -> Result<u64, WorkflowError> 
 
 // is_private_ip is provided by buzz_core::network::is_private_ip
 
+/// Complete a webhook step without aborting the rest of the workflow.
+///
+/// Transport failures (DNS, SSRF, TLS, HTTP) become a `{status: 0, error}`
+/// output so later steps can still run and read `{{steps.<id>.status}}`.
+fn completed_webhook_step(result: Result<JsonValue, WorkflowError>) -> StepResult {
+    match result {
+        Ok(output) => StepResult::Completed(output),
+        Err(error) => {
+            warn!("CallWebhook failed; continuing remaining steps: {error}");
+            StepResult::Completed(webhook_error_output(&error))
+        }
+    }
+}
+
+fn webhook_error_output(error: &WorkflowError) -> JsonValue {
+    serde_json::json!({
+        "status": 0,
+        "body": serde_json::Value::Null,
+        "error": error.to_string(),
+    })
+}
+
+/// Reject mixed public+private DNS answers (SSRF / rebinding). Prefer IPv4
+/// among remaining public addresses so dual-stack hosts do not pin to a
+/// broken AAAA record.
+fn select_ssrf_pin_ip(
+    host: &str,
+    addrs: &[std::net::IpAddr],
+) -> Result<std::net::IpAddr, WorkflowError> {
+    if addrs.is_empty() {
+        return Err(WorkflowError::WebhookError(
+            "DNS resolution returned no addresses".into(),
+        ));
+    }
+
+    for ip in addrs {
+        if buzz_core::network::is_private_ip(ip) {
+            return Err(WorkflowError::WebhookError(format!(
+                "SSRF blocked: '{host}' resolved to private/reserved address {ip}"
+            )));
+        }
+    }
+
+    Ok(addrs
+        .iter()
+        .copied()
+        .find(std::net::IpAddr::is_ipv4)
+        .unwrap_or(addrs[0]))
+}
+
+fn json_body_needs_content_type(
+    headers: &Option<std::collections::HashMap<String, String>>,
+    body: &str,
+) -> bool {
+    let has_content_type = headers.as_ref().is_some_and(|hdrs| {
+        hdrs.keys()
+            .any(|key| key.eq_ignore_ascii_case("content-type"))
+    });
+    if has_content_type {
+        return false;
+    }
+    let trimmed = body.trim_start();
+    trimmed.starts_with('{') || trimmed.starts_with('[')
+}
+
 /// Resolve `host` to IP addresses and reject if any are private/reserved.
 ///
 /// Uses the OS resolver (blocking, run on a threadpool via `spawn_blocking`).
 /// Rejects the request if DNS resolution fails or returns zero addresses.
 ///
-/// Returns the first validated IP address so the caller can pin DNS resolution
+/// Returns a validated IP address so the caller can pin DNS resolution
 /// in the HTTP client, preventing DNS rebinding TOCTOU attacks.
 #[cfg(feature = "reqwest")]
 async fn check_ssrf(host: &str, port: u16) -> Result<std::net::IpAddr, WorkflowError> {
@@ -847,23 +920,9 @@ async fn check_ssrf(host: &str, port: u16) -> Result<std::net::IpAddr, WorkflowE
     .map_err(|e| WorkflowError::WebhookError(format!("SSRF check task failed: {e}")))?
     .map_err(|e| WorkflowError::WebhookError(format!("DNS resolution failed: {e}")))?;
 
-    if addrs.is_empty() {
-        return Err(WorkflowError::WebhookError(
-            "DNS resolution returned no addresses".into(),
-        ));
-    }
-
     debug!("Resolved webhook host '{}' → {:?}", host, addrs);
 
-    for ip in &addrs {
-        if buzz_core::network::is_private_ip(ip) {
-            return Err(WorkflowError::WebhookError(format!(
-                "SSRF blocked: '{host}' resolved to private/reserved address {ip}"
-            )));
-        }
-    }
-
-    Ok(addrs[0])
+    select_ssrf_pin_ip(host, &addrs)
 }
 
 /// Maximum response body size for webhook calls (1 MiB).
@@ -919,6 +978,9 @@ async fn call_webhook_impl(
     }
 
     if let Some(b) = body {
+        if json_body_needs_content_type(headers, b) {
+            req = req.header("Content-Type", "application/json");
+        }
         req = req.body(b.clone());
     }
 
@@ -1348,6 +1410,25 @@ mod tests {
         outputs.insert("ask".to_owned(), json!({ "replied": "yes" }));
         let out = resolve_template("Reply: {{steps.ask.output.replied}}", &ctx, &outputs).unwrap();
         assert_eq!(out, "Reply: yes");
+    }
+
+    #[test]
+    fn resolve_step_output_shorthand_and_documented_paths() {
+        let ctx = make_trigger();
+        let mut outputs = HashMap::new();
+        outputs.insert("hit".to_owned(), json!({ "status": 0, "error": "dns" }));
+        assert_eq!(
+            resolve_template("{{steps.hit.status}}", &ctx, &outputs).unwrap(),
+            "0"
+        );
+        assert_eq!(
+            resolve_template("{{steps.hit.output.status}}", &ctx, &outputs).unwrap(),
+            "0"
+        );
+        assert_eq!(
+            resolve_template("{{steps.hit.error}}", &ctx, &outputs).unwrap(),
+            "dns"
+        );
     }
 
     #[test]
@@ -1977,5 +2058,74 @@ mod tests {
             resolve_send_message_channel(Some(&override_channel_id.to_string()), "", None)
                 .expect("override should be accepted");
         assert_eq!(resolved, override_channel_id.to_string());
+    }
+
+    #[test]
+    fn select_ssrf_pin_ip_prefers_ipv4_among_public_addresses() {
+        let v4: std::net::IpAddr = "1.2.3.4".parse().unwrap();
+        let v6: std::net::IpAddr = "2606:4700::1".parse().unwrap();
+        assert_eq!(select_ssrf_pin_ip("example.com", &[v6, v4]).unwrap(), v4);
+        assert_eq!(select_ssrf_pin_ip("example.com", &[v6]).unwrap(), v6);
+    }
+
+    #[test]
+    fn select_ssrf_pin_ip_rejects_private_answers() {
+        let public: std::net::IpAddr = "1.1.1.1".parse().unwrap();
+        let loopback: std::net::IpAddr = "127.0.0.1".parse().unwrap();
+        let err = select_ssrf_pin_ip("evil.example", &[public, loopback]).unwrap_err();
+        assert!(
+            matches!(err, WorkflowError::WebhookError(ref msg) if msg.contains("SSRF blocked")),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn webhook_transport_failure_completes_step_with_status_zero() {
+        let result = completed_webhook_step(Err(WorkflowError::WebhookError(
+            "DNS resolution failed: failed to lookup address information".into(),
+        )));
+        let output = match result {
+            StepResult::Completed(output) => output,
+            other => panic!("expected completed step, got {other:?}"),
+        };
+        assert_eq!(output["status"], 0);
+        assert!(output["error"].as_str().unwrap().contains("DNS resolution"));
+
+        // execute_steps stores Completed output under the step id, then later
+        // send_message templates resolve {{steps.hit.status}} (#8016).
+        let mut step_outputs = HashMap::new();
+        step_outputs.insert("hit".to_owned(), output);
+        let ctx = make_trigger();
+        assert_eq!(
+            resolve_template("status={{steps.hit.status}}", &ctx, &step_outputs).unwrap(),
+            "status=0"
+        );
+
+        // Reverting the production call site to propagate with `?` would abort
+        // remaining steps again. Split the needle so this assertion is not a
+        // self-match.
+        let src = include_str!("executor.rs");
+        assert!(
+            src.contains("completed_webhook_step("),
+            "CallWebhook must complete transport failures instead of aborting"
+        );
+        let await_try = format!(
+            "{}{}",
+            "call_webhook_impl(url, method_str, headers, body).await", "?"
+        );
+        assert!(
+            !src.contains(&await_try),
+            "CallWebhook must not propagate transport errors with ?"
+        );
+    }
+
+    #[test]
+    fn json_body_gets_content_type_only_when_missing() {
+        let body = "{\"t\":\"/ping\"}";
+        assert!(json_body_needs_content_type(&None, body));
+        let mut headers = std::collections::HashMap::new();
+        headers.insert("Content-Type".into(), "text/plain".into());
+        assert!(!json_body_needs_content_type(&Some(headers), body));
+        assert!(!json_body_needs_content_type(&None, "not-json"));
     }
 }
