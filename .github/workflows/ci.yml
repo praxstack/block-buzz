@@ -110,6 +110,8 @@ jobs:
         run: |
           scripts/test-rust-cache-contract.sh
           scripts/test-rust-cache-contract-regressions.sh
+      - name: Agent skills pin contract
+        run: scripts/test-install-agent-skills-pin.sh
       - name: File size policy
         run: just file-size-check
 
