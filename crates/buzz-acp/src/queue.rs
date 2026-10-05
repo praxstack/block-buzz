@@ -24,6 +24,37 @@ use crate::prompt_project::PromptProjectInfo;
 use crate::config::DedupMode;
 use crate::scope::SessionScope;
 
+/// Bounded journal of batches that exhausted [`MAX_RETRIES`].
+///
+/// Overflow drops the oldest record. The journal is an operator-visible
+/// retry record, not a second delivery queue.
+const MAX_DEAD_LETTERS: usize = 32;
+
+/// Snapshot of a batch that will not be retried.
+#[derive(Debug, Clone)]
+pub struct DeadLetterRecord {
+    pub channel_id: Uuid,
+    pub scope: SessionScope,
+    pub event_ids: Vec<String>,
+    pub event_count: usize,
+}
+
+impl DeadLetterRecord {
+    fn from_batch(batch: &FlushBatch) -> Self {
+        Self {
+            channel_id: batch.channel_id,
+            scope: batch.scope.clone(),
+            event_ids: batch
+                .events
+                .iter()
+                .map(BatchEvent::routing_event_id)
+                .take(16)
+                .collect(),
+            event_count: batch.events.len(),
+        }
+    }
+}
+
 /// Maximum events queued per session scope before oldest events are dropped.
 ///
 /// Under the `channel` policy there is exactly one scope per channel, so this
@@ -347,6 +378,8 @@ pub struct EventQueue {
     /// Must be strictly greater than `max_turn_duration` so a turn running to
     /// the hard cap returns via `mark_complete` before the backstop fires.
     in_flight_deadline: Duration,
+    /// Batches that exhausted [`MAX_RETRIES`] and will not be flushed again.
+    dead_letters: VecDeque<DeadLetterRecord>,
 }
 
 impl EventQueue {
@@ -369,6 +402,7 @@ impl EventQueue {
             cancel_reasons: HashMap::new(),
             withheld_native_steer: HashMap::new(),
             in_flight_deadline: Duration::from_secs(DEFAULT_IN_FLIGHT_DEADLINE_SECS),
+            dead_letters: VecDeque::new(),
         }
     }
 
@@ -700,6 +734,7 @@ impl EventQueue {
             // Also clear retry_after so fresh traffic on this scope isn't
             // throttled by stale backoff from the discarded poison batch.
             self.retry_after.remove(&scope);
+            self.park_dead_letter(&batch);
             return Some(batch);
         }
 
@@ -944,6 +979,26 @@ impl EventQueue {
         self.queues.get(&scope.into_scope()).map_or(0, |q| q.len())
     }
 
+    fn park_dead_letter(&mut self, batch: &FlushBatch) {
+        if self.dead_letters.len() >= MAX_DEAD_LETTERS {
+            self.dead_letters.pop_front();
+            tracing::warn!(
+                channel_id = %batch.channel_id,
+                cap = MAX_DEAD_LETTERS,
+                "dead-letter journal full — dropped oldest record"
+            );
+        }
+        let record = DeadLetterRecord::from_batch(batch);
+        tracing::error!(
+            channel_id = %record.channel_id,
+            scope = %record.scope.telemetry_label(),
+            events = record.event_count,
+            event_ids = ?record.event_ids,
+            "dead-letter journaled after retry budget exhausted"
+        );
+        self.dead_letters.push_back(record);
+    }
+
     /// Force a channel's retry-attempt counter to `count`, simulating `count`
     /// prior failed attempts without needing to drive fake flush/requeue
     /// cycles through the queue (which would leave artifact events behind).
@@ -952,6 +1007,12 @@ impl EventQueue {
     #[cfg(test)]
     pub fn set_retry_count_for_test<K: IntoScope>(&mut self, scope: K, count: u32) {
         self.retry_counts.insert(scope.into_scope(), count);
+    }
+
+    /// Number of parked dead-letter records. Test-only.
+    #[cfg(test)]
+    pub fn dead_letter_count(&self) -> usize {
+        self.dead_letters.len()
     }
 
     /// Drop all queued (non-in-flight) events for a channel.
@@ -4238,6 +4299,7 @@ mod tests {
         let dead = q.requeue(batch).expect("should dead-letter");
         assert_eq!(dead.channel_id, ch);
         assert_eq!(dead.events.len(), 1);
+        assert_eq!(q.dead_letter_count(), 1);
         q.mark_complete(ch);
         // Retry state is cleared so fresh traffic isn't throttled.
         assert!(!q.retry_counts.contains_key(&conv(ch)));

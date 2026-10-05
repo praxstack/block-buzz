@@ -3794,7 +3794,7 @@ async fn run_harness(
                 {
                     break;
                 }
-                if drain_ready_join_results(
+                let (drain_action, drain_notice) = drain_ready_join_results(
                     &mut pool,
                     &mut queue,
                     config,
@@ -3805,8 +3805,10 @@ async fn run_harness(
                     &respawn_tx,
                     &mut respawn_tasks,
                     observer.clone(),
-                ) == LoopAction::Exit
-                {
+                    Some(&ctx.rest_client),
+                );
+                if drain_action == LoopAction::Exit {
+                    join_failure_notice(drain_notice).await;
                     break;
                 }
                 for (scope, thread_tags) in dispatch_pending(
@@ -3821,7 +3823,7 @@ async fn run_harness(
             }
             Some(PoolEvent::Panic(join_error)) => {
                 tracing::error!("agent task panicked: {join_error}");
-                recover_panicked_agent(
+                let notice = recover_panicked_agent(
                     &mut pool,
                     &mut queue,
                     config,
@@ -3833,9 +3835,11 @@ async fn run_harness(
                     &respawn_tx,
                     &mut respawn_tasks,
                     observer.clone(),
+                    Some(&ctx.rest_client),
                 );
                 if pool.live_count() == 0 && !any_respawn_in_flight(&crash_history) {
                     tracing::error!("all agents dead — exiting");
+                    join_failure_notice(notice).await;
                     break;
                 }
                 for (scope, thread_tags) in dispatch_pending(
@@ -4992,20 +4996,21 @@ fn failure_notice_thread_tags(
 /// dead-letter path so neither duplicates the tokio::spawn block. An edit
 /// whose original was not resolved at admission gets one more lookup here, so
 /// a transient fetch failure does not detach the notice from its thread.
+///
+/// Dropping the returned [`tokio::task::JoinHandle`] detaches the task (same
+/// as a bare `tokio::spawn`). Callers that are about to exit the harness must
+/// join it via [`join_failure_notice`] so the notice is not cancelled with the
+/// runtime.
 fn spawn_failure_notice(
     rest_client: Option<&relay::RestClient>,
     batch: &FlushBatch,
     content: String,
-) {
-    let Some(rest) = rest_client else {
-        return;
-    };
-    let Some(last) = batch.events.last().cloned() else {
-        return;
-    };
+) -> Option<tokio::task::JoinHandle<()>> {
+    let rest = rest_client?;
+    let last = batch.events.last().cloned()?;
     let rest = rest.clone();
     let channel_id = batch.channel_id;
-    tokio::spawn(async move {
+    Some(tokio::spawn(async move {
         let edit = match last.edit.clone() {
             Some(edit) => Some(edit),
             None if queue::edit_target_id(&last.event).is_some() => {
@@ -5015,7 +5020,39 @@ fn spawn_failure_notice(
         };
         let thread_tags = failure_notice_thread_tags(&last, edit.as_ref());
         pool::post_failure_notice(&rest, channel_id, &thread_tags, &content).await;
-    });
+    }))
+}
+
+/// Join a failure-notice task before the harness process exits.
+///
+/// [`post_failure_notice`] already times out at 5s; this adds a second for
+/// scheduling so a hung relay cannot stall shutdown indefinitely.
+async fn join_failure_notice(handle: Option<tokio::task::JoinHandle<()>>) {
+    let Some(handle) = handle else {
+        return;
+    };
+    if tokio::time::timeout(Duration::from_secs(6), handle)
+        .await
+        .is_err()
+    {
+        tracing::warn!("failure notice still pending at harness exit");
+    }
+}
+
+fn panic_dead_letter_notice(batch: &FlushBatch) -> String {
+    let preview = batch
+        .events
+        .last()
+        .map(|event| event.event.content.trim())
+        .filter(|content| !content.is_empty())
+        .map(|content| {
+            let truncated: String = content.chars().take(80).collect();
+            format!(" Last message: {truncated}")
+        })
+        .unwrap_or_default();
+    format!(
+        "⚠️ I crashed while processing the last request and could not retry it.{preview} Please re-send if it's still needed."
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -5114,7 +5151,7 @@ fn handle_prompt_result(
                     "⚠️ I couldn't process the last request (the turn exceeded the maximum duration ({}s)). Please re-send if it's still needed.",
                     config.max_turn_duration_secs
                 );
-                spawn_failure_notice(rest_client, &batch, content);
+                let _ = spawn_failure_notice(rest_client, &batch, content);
                 hard_timeout_fate_suffix = Some(" — dead-lettered (no recent activity)");
             } else if matches!(
                 result.outcome,
@@ -5132,7 +5169,7 @@ fn handle_prompt_result(
                         "⚠️ I couldn't process the last request after multiple retries (the turn exceeded the maximum duration ({}s)). Please re-send if it's still needed.",
                         config.max_turn_duration_secs
                     );
-                    spawn_failure_notice(rest_client, &dead, content);
+                    let _ = spawn_failure_notice(rest_client, &dead, content);
                     hard_timeout_fate_suffix = Some(" — dead-lettered (retry budget exhausted)");
                 } else {
                     hard_timeout_fate_suffix = Some(" — requeued for retry (recently active)");
@@ -5153,7 +5190,7 @@ fn handle_prompt_result(
                     different model from the dropdown, and save your changes. Restart the agent \
                     to apply the new configuration, then re-send your request."
                     .to_string();
-                spawn_failure_notice(rest_client, &batch, content);
+                let _ = spawn_failure_notice(rest_client, &batch, content);
             } else if matches!(&result.outcome, PromptOutcome::Error(e) if is_auth_error(e)) {
                 // Auth errors are non-retryable: the token won't self-repair
                 // between retries, so requeueing only wastes attempt slots and
@@ -5168,7 +5205,7 @@ fn handle_prompt_result(
                     Please re-authenticate the CLI (e.g. run `claude /login` or `codex login`) \
                     and then re-send."
                     .to_string();
-                spawn_failure_notice(rest_client, &batch, content);
+                let _ = spawn_failure_notice(rest_client, &batch, content);
             } else if let Some(dead) = queue.requeue(batch) {
                 let reason = match &result.outcome {
                     PromptOutcome::Timeout(TimeoutKind::Idle) => "the turn timed out".to_string(),
@@ -5183,7 +5220,7 @@ fn handle_prompt_result(
                 let content = format!(
                     "⚠️ I couldn't process the last request after multiple retries ({reason}). Please re-send if it's still needed."
                 );
-                spawn_failure_notice(rest_client, &dead, content);
+                let _ = spawn_failure_notice(rest_client, &dead, content);
             }
         } else {
             tracing::debug!(
@@ -5447,22 +5484,31 @@ fn recover_panicked_agent(
     respawn_tx: &mpsc::Sender<RespawnResult>,
     respawn_tasks: &mut tokio::task::JoinSet<()>,
     observer: Option<observer::ObserverHandle>,
-) {
+    rest_client: Option<&relay::RestClient>,
+) -> Option<tokio::task::JoinHandle<()>> {
     let task_id = join_error.id();
     let Some(meta) = pool.task_map_mut().remove(&task_id) else {
         tracing::error!("panic for unknown task {task_id:?} — bug");
-        return;
+        return None;
     };
     let i = meta.agent_index;
 
     // Requeue BEFORE mark_complete (same rationale as handle_prompt_result).
+    let mut notice = None;
     if let Some(batch) = meta.recoverable_batch {
         if let Some(ch) = meta.channel_id {
             if !removed_channels.contains(&ch) {
-                // Dead-letter on exhaustion is logged inside requeue(); a
-                // panic path has no outcome to report, so no notice here.
-                let _ = queue.requeue(batch);
-                tracing::warn!("requeued batch for panicked agent {i}");
+                if let Some(dead) = queue.requeue(batch) {
+                    tracing::error!(
+                        channel_id = %dead.channel_id,
+                        events = dead.events.len(),
+                        "dead-lettering panicked batch after retry budget exhausted"
+                    );
+                    notice =
+                        spawn_failure_notice(rest_client, &dead, panic_dead_letter_notice(&dead));
+                } else {
+                    tracing::warn!("requeued batch for panicked agent {i}");
+                }
             } else {
                 tracing::debug!(
                     channel_id = %ch,
@@ -5516,7 +5562,7 @@ fn recover_panicked_agent(
     let delay = match slot.record_crash() {
         CrashVerdict::CircuitOpen => {
             tracing::error!(agent = i, "circuit open after panic — not respawning");
-            return;
+            return notice;
         }
         CrashVerdict::HalfOpenProbe => {
             tracing::info!(agent = i, "circuit half-open — probe respawn after panic");
@@ -5546,6 +5592,7 @@ fn recover_panicked_agent(
         let result = spawn_and_init(&cmd, &args, &env, has_codex, i, observer).await;
         guard.send(result);
     });
+    notice
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -5560,11 +5607,12 @@ fn drain_ready_join_results(
     respawn_tx: &mpsc::Sender<RespawnResult>,
     respawn_tasks: &mut tokio::task::JoinSet<()>,
     observer: Option<observer::ObserverHandle>,
-) -> LoopAction {
+    rest_client: Option<&relay::RestClient>,
+) -> (LoopAction, Option<tokio::task::JoinHandle<()>>) {
     while let Some(Some(join_result)) = pool.join_set.join_next().now_or_never() {
         if let Err(join_error) = join_result {
             tracing::error!("agent task panicked: {join_error}");
-            recover_panicked_agent(
+            let notice = recover_panicked_agent(
                 pool,
                 queue,
                 config,
@@ -5576,13 +5624,14 @@ fn drain_ready_join_results(
                 respawn_tx,
                 respawn_tasks,
                 observer.clone(),
+                rest_client,
             );
             if pool.live_count() == 0 && !any_respawn_in_flight(crash_history) {
-                return LoopAction::Exit;
+                return (LoopAction::Exit, notice);
             }
         }
     }
-    LoopAction::Continue
+    (LoopAction::Continue, None)
 }
 
 fn dispatch_heartbeat(
@@ -11022,7 +11071,7 @@ mod error_outcome_emission_tests {
         let mut respawn_tasks = tokio::task::JoinSet::new();
         let observer = ObserverHandle::in_process();
 
-        recover_panicked_agent(
+        let _ = recover_panicked_agent(
             &mut pool,
             &mut queue,
             &config,
@@ -11034,6 +11083,7 @@ mod error_outcome_emission_tests {
             &respawn_tx,
             &mut respawn_tasks,
             Some(observer.clone()),
+            None,
         );
 
         let panic = observer
@@ -11115,7 +11165,7 @@ mod error_outcome_emission_tests {
         let (respawn_tx, _respawn_rx) = mpsc::channel(8);
         let mut respawn_tasks = tokio::task::JoinSet::new();
 
-        recover_panicked_agent(
+        let _ = recover_panicked_agent(
             &mut pool,
             &mut queue,
             &config,
@@ -11126,6 +11176,7 @@ mod error_outcome_emission_tests {
             &mut crash_history,
             &respawn_tx,
             &mut respawn_tasks,
+            None,
             None,
         );
 
@@ -11144,6 +11195,241 @@ mod error_outcome_emission_tests {
             queue.has_undispatched_work(),
             "requeued thread batch must be queued (undispatched) after recovery"
         );
+        assert_eq!(
+            queue.dead_letter_count(),
+            0,
+            "first panic retry must requeue, not dead-letter"
+        );
+    }
+
+    #[tokio::test]
+    async fn panic_recovery_dead_letters_exhausted_batch() {
+        let mut pool = AgentPool::from_slots(vec![]);
+        let channel_id = Uuid::new_v4();
+        let scope = scope::SessionScope::Conversation { channel_id };
+
+        let mut queue = EventQueue::new(config::DedupMode::Queue);
+        let event = EventBuilder::new(Kind::Custom(9), "please retry this")
+            .tags([])
+            .sign_with_keys(&Keys::generate())
+            .unwrap();
+        queue.push(queue::QueuedEvent {
+            edit: None,
+            channel_id,
+            scope: scope.clone(),
+            event,
+            received_at: std::time::Instant::now(),
+            prompt_tag: "t".into(),
+        });
+        let batch = queue.flush_next().expect("flush");
+        queue.set_retry_count_for_test(channel_id, crate::queue::MAX_RETRIES);
+
+        let (started_tx, started_rx) = tokio::sync::oneshot::channel();
+        let abort_handle = pool.join_set.spawn(async move {
+            let _ = started_tx.send(());
+            std::future::pending::<()>().await;
+        });
+        pool.task_map_mut().insert(
+            abort_handle.id(),
+            crate::pool::TaskMeta {
+                agent_index: 0,
+                channel_id: Some(channel_id),
+                scope: Some(scope.clone()),
+                turn_id: "panic-dead-letter-turn".to_string(),
+                recoverable_batch: Some(batch.clone()),
+                control_tx: None,
+                steer_tx: None,
+                successful_steer_deliveries: HashSet::new(),
+            },
+        );
+        started_rx.await.unwrap();
+        abort_handle.abort();
+        let join_error = pool.join_set.join_next().await.unwrap().unwrap_err();
+
+        let config = test_config();
+        let mut heartbeat_in_flight = false;
+        let removed_channels = HashSet::new();
+        let mut typing_channels = HashMap::new();
+        let mut crash_history = vec![SlotCircuit {
+            crash_times: Vec::new(),
+            open_until: Some(std::time::Instant::now() + Duration::from_secs(3600)),
+            respawn_in_flight: false,
+        }];
+        let (respawn_tx, _respawn_rx) = mpsc::channel(8);
+        let mut respawn_tasks = tokio::task::JoinSet::new();
+
+        let _ = recover_panicked_agent(
+            &mut pool,
+            &mut queue,
+            &config,
+            join_error,
+            &mut heartbeat_in_flight,
+            &removed_channels,
+            &mut typing_channels,
+            &mut crash_history,
+            &respawn_tx,
+            &mut respawn_tasks,
+            None,
+            None,
+        );
+
+        assert!(
+            !queue.is_scope_in_flight(&scope),
+            "exhausted panic recovery must still free the scope"
+        );
+        assert!(
+            !queue.has_undispatched_work(),
+            "exhausted panic recovery must not requeue the poison batch"
+        );
+        assert_eq!(queue.dead_letter_count(), 1);
+        assert!(panic_dead_letter_notice(&batch).contains("please retry this"));
+    }
+
+    #[test]
+    fn all_agents_dead_exit_joins_failure_notice_task() {
+        let src = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/lib.rs"));
+        let panic_join = format!("{}{}", "join_failure_notice(notice)", ".await");
+        let drain_join = format!("{}{}", "join_failure_notice(drain_notice)", ".await");
+        assert!(
+            src.contains(&panic_join),
+            "PoolEvent::Panic all-agents-dead exit must join the notice task"
+        );
+        assert!(
+            src.contains(&drain_join),
+            "drain_ready_join_results Exit must join the notice task"
+        );
+    }
+
+    #[tokio::test]
+    async fn panic_recovery_dead_letter_posts_notice_over_rest() {
+        use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+
+        let mut pool = AgentPool::from_slots(vec![]);
+        let channel_id = Uuid::new_v4();
+        let scope = scope::SessionScope::Conversation { channel_id };
+
+        let mut queue = EventQueue::new(config::DedupMode::Queue);
+        let event = EventBuilder::new(Kind::Custom(9), "please retry this")
+            .tags([])
+            .sign_with_keys(&Keys::generate())
+            .unwrap();
+        queue.push(queue::QueuedEvent {
+            edit: None,
+            channel_id,
+            scope: scope.clone(),
+            event,
+            received_at: std::time::Instant::now(),
+            prompt_tag: "t".into(),
+        });
+        let batch = queue.flush_next().expect("flush");
+        queue.set_retry_count_for_test(channel_id, crate::queue::MAX_RETRIES);
+
+        let (started_tx, started_rx) = tokio::sync::oneshot::channel();
+        let abort_handle = pool.join_set.spawn(async move {
+            let _ = started_tx.send(());
+            std::future::pending::<()>().await;
+        });
+        pool.task_map_mut().insert(
+            abort_handle.id(),
+            crate::pool::TaskMeta {
+                agent_index: 0,
+                channel_id: Some(channel_id),
+                scope: Some(scope.clone()),
+                turn_id: "panic-dead-letter-rest-turn".to_string(),
+                recoverable_batch: Some(batch.clone()),
+                control_tx: None,
+                steer_tx: None,
+                successful_steer_deliveries: HashSet::new(),
+            },
+        );
+        started_rx.await.unwrap();
+        abort_handle.abort();
+        let join_error = pool.join_set.join_next().await.unwrap().unwrap_err();
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let rest = relay::RestClient {
+            http: reqwest::Client::new(),
+            base_url: format!("http://{}", listener.local_addr().unwrap()),
+            keys: Keys::generate(),
+            auth_tag_json: None,
+        };
+
+        let config = test_config();
+        let mut heartbeat_in_flight = false;
+        let removed_channels = HashSet::new();
+        let mut typing_channels = HashMap::new();
+        let mut crash_history = vec![SlotCircuit {
+            crash_times: Vec::new(),
+            open_until: Some(std::time::Instant::now() + Duration::from_secs(3600)),
+            respawn_in_flight: false,
+        }];
+        let (respawn_tx, _respawn_rx) = mpsc::channel(8);
+        let mut respawn_tasks = tokio::task::JoinSet::new();
+
+        let notice_handle = recover_panicked_agent(
+            &mut pool,
+            &mut queue,
+            &config,
+            join_error,
+            &mut heartbeat_in_flight,
+            &removed_channels,
+            &mut typing_channels,
+            &mut crash_history,
+            &respawn_tx,
+            &mut respawn_tasks,
+            None,
+            Some(&rest),
+        )
+        .expect("exhausted panic recovery with REST must spawn a joinable notice task");
+
+        assert_eq!(queue.dead_letter_count(), 1);
+        assert!(
+            !queue.has_undispatched_work(),
+            "exhausted panic recovery must not requeue the poison batch"
+        );
+
+        let posted: nostr::Event = tokio::time::timeout(Duration::from_secs(3), async {
+            let (socket, _) = listener.accept().await.unwrap();
+            let mut reader = BufReader::new(socket);
+            let mut line = String::new();
+            reader.read_line(&mut line).await.unwrap();
+            assert_eq!(line, "POST /events HTTP/1.1\r\n");
+            let mut content_length = None;
+            for _ in 0..64 {
+                line.clear();
+                assert_ne!(reader.read_line(&mut line).await.unwrap(), 0);
+                if line == "\r\n" {
+                    break;
+                }
+                if let Some(value) = line.to_ascii_lowercase().strip_prefix("content-length:") {
+                    content_length = Some(value.trim().parse::<usize>().unwrap());
+                }
+            }
+            let size = content_length.expect("request Content-Length");
+            assert!(size < 65536);
+            let mut body = vec![0; size];
+            reader.read_exact(&mut body).await.unwrap();
+            reader
+                .get_mut()
+                .write_all(
+                    b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}",
+                )
+                .await
+                .unwrap();
+            serde_json::from_slice(&body).unwrap()
+        })
+        .await
+        .expect("panic dead-letter must POST /events");
+
+        join_failure_notice(Some(notice_handle)).await;
+
+        let expected = panic_dead_letter_notice(&batch);
+        assert!(
+            posted.content.contains("please retry this"),
+            "posted notice must include the last-message preview"
+        );
+        assert_eq!(posted.content, expected);
+        assert_eq!(posted.kind, nostr::Kind::Custom(KIND_STREAM_MESSAGE as u16));
     }
 
     #[tokio::test]
