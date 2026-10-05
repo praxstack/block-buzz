@@ -6,9 +6,13 @@ Scratchpad for learning the agent stack. Add dated entries as you explore.
 
 - **Branch truth:** `prax/gstack-setup-533e` does not exist in this fork. Cloud VMs resume on feature branches from prior agent runs (e.g. `prax/praxstack-skills-personas-a3ec`). Default branch is `main`.
 - **PR #9 merged** — praxstack skills, personas, workflows now on `main` (commit `a12d71b5`).
-- **PR #2** — stale draft; superseded by PRs #4–#7. Close manually (integration token cannot close PRs).
+- **PR #2** — closed as superseded (PRs #4–#7). Remote `prax/cloud-agent-env-setup-a3ec` can be deleted; see [STALE-BRANCHES.md](STALE-BRANCHES.md).
 - **One methodology per task** — do not load kingmode + gstack + superpowers in one session.
 - **Install order:** Hermit activate → `just setup` (or cloud-agent scripts) → `install-agent-skills.sh`.
+
+## 2026-10-05 — Stale branch inventory
+
+Merged 2026-08-29 `prax/*` remotes are still on origin. Operator checklist (no deletes in that change): [STALE-BRANCHES.md](STALE-BRANCHES.md). Do not fight ImgBot PR #1.
 
 ## Open questions
 

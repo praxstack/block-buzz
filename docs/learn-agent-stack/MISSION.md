@@ -36,3 +36,4 @@ You can:
 | 2 | [Glossary](reference/glossary.html) |
 | 3 | [Resources](RESOURCES.md) |
 | 4 | [Session notes](learning-records/0001-session-bootstrap.md) |
+| 5 | [Stale `prax/*` remotes](STALE-BRANCHES.md) |
