@@ -1575,6 +1575,7 @@ name = "buzz-voice"
 version = "0.1.0"
 dependencies = [
  "atomic-write-file",
+ "cc",
  "hex",
  "ort",
  "ort-sys",
