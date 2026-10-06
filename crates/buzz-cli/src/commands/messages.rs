@@ -608,6 +608,52 @@ pub struct SendMessageParams {
     pub mentions: Vec<String>,
 }
 
+/// Original basename for NIP-92 `imeta` `filename` and the file-link label.
+/// Rejects names the relay would refuse (empty, too long, separators, controls).
+fn upload_attachment_filename(path: &str) -> Option<String> {
+    let name = std::path::Path::new(path)
+        .file_name()
+        .and_then(|n| n.to_str())?;
+    if name.is_empty() || name.len() > 255 {
+        return None;
+    }
+    if name.contains('/') || name.contains('\\') || name.chars().any(|c| c.is_control()) {
+        return None;
+    }
+    Some(name.to_string())
+}
+
+fn escape_markdown_link_label(label: &str) -> String {
+    let mut out = String::with_capacity(label.len());
+    for c in label.chars() {
+        if matches!(c, '\\' | '[' | ']') {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
+}
+
+/// Markdown line appended for an uploaded blob.
+///
+/// Images and video stay on the inline `![image|video](url)` renderer path.
+/// Newly allowed text/octet-stream blobs use `[filename](url)` so clients
+/// render a file card instead of an image.
+fn format_upload_attachment_markdown(mime: &str, url: &str, filename: &str) -> String {
+    if mime.starts_with("video/") {
+        format!("\n![video]({url})")
+    } else if mime.starts_with("image/") {
+        format!("\n![image]({url})")
+    } else {
+        let label = if filename.is_empty() {
+            "file"
+        } else {
+            filename
+        };
+        format!("\n[{}]({url})", escape_markdown_link_label(label))
+    }
+}
+
 pub async fn cmd_send_message(
     client: &BuzzClient,
     mut p: SendMessageParams,
@@ -655,14 +701,17 @@ pub async fn cmd_send_message(
             .upload_file(file_path)
             .await
             .map_err(|e| CliError::Other(format!("upload failed for {file_path}: {e}")))?;
-        media_tags.push(crate::client::build_imeta_tag(&desc));
-        if desc.mime_type.starts_with("video/") {
-            media_content.push_str("\n![video](");
-        } else {
-            media_content.push_str("\n![image](");
+        let filename = upload_attachment_filename(file_path);
+        let mut tag = crate::client::build_imeta_tag(&desc);
+        if let Some(ref name) = filename {
+            tag.push(format!("filename {name}"));
         }
-        media_content.push_str(&desc.url);
-        media_content.push(')');
+        media_tags.push(tag);
+        media_content.push_str(&format_upload_attachment_markdown(
+            &desc.mime_type,
+            &desc.url,
+            filename.as_deref().unwrap_or("file"),
+        ));
     }
     let final_content = if media_content.is_empty() {
         p.content.clone()
@@ -1615,7 +1664,7 @@ mod tests {
     use axum::body::Bytes as AxumBytes;
     use axum::extract::State as AxumState;
     use axum::http::{HeaderMap as AxumHeaderMap, StatusCode as AxumStatusCode};
-    use axum::routing::post as axum_post;
+    use axum::routing::{post as axum_post, put as axum_put};
     use axum::Router as AxumRouter;
     use std::net::SocketAddr as StdSocketAddr;
     use std::sync::atomic::{AtomicU32, Ordering};
@@ -1683,6 +1732,28 @@ mod tests {
                         )
                     },
                 ),
+            )
+            .route(
+                "/upload",
+                axum_put(|headers: AxumHeaderMap, body: AxumBytes| async move {
+                    let mime = headers
+                        .get(axum::http::header::CONTENT_TYPE)
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or("application/octet-stream");
+                    let desc = serde_json::json!({
+                        "url": "https://relay.test/media/deadbeef.bin",
+                        "sha256": "ab".repeat(32),
+                        "size": body.len(),
+                        "type": mime,
+                        "uploaded": 0
+                    })
+                    .to_string();
+                    (
+                        AxumStatusCode::OK,
+                        [("content-type", "application/json")],
+                        desc,
+                    )
+                }),
             )
             .with_state(state);
 
@@ -1886,6 +1957,138 @@ mod tests {
         assert!(
             emoji_tags.is_empty(),
             "palette-error fallback must produce no emoji tags, got: {emoji_tags:?}"
+        );
+    }
+
+    fn captured_send_event(
+        captured: &StdArc<std::sync::Mutex<Option<CapturedEvent>>>,
+    ) -> serde_json::Value {
+        let raw = captured.lock().unwrap();
+        let raw = raw.as_ref().expect("event must have been submitted");
+        serde_json::from_str(&raw.body).expect("submitted event JSON")
+    }
+
+    fn event_imeta_tags(event: &serde_json::Value) -> Vec<Vec<String>> {
+        event["tags"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|t| {
+                let tag: Vec<String> = t
+                    .as_array()?
+                    .iter()
+                    .map(|v| v.as_str().unwrap_or("").to_string())
+                    .collect();
+                (tag.first().map(String::as_str) == Some("imeta")).then_some(tag)
+            })
+            .collect()
+    }
+
+    #[test]
+    fn upload_markdown_uses_file_link_for_text_and_octet_stream() {
+        assert_eq!(
+            super::format_upload_attachment_markdown(
+                "text/plain",
+                "https://relay.test/media/a.txt",
+                "notes.txt"
+            ),
+            "\n[notes.txt](https://relay.test/media/a.txt)"
+        );
+        assert_eq!(
+            super::format_upload_attachment_markdown(
+                "application/octet-stream",
+                "https://relay.test/media/a.bin",
+                "blob.bin"
+            ),
+            "\n[blob.bin](https://relay.test/media/a.bin)"
+        );
+        assert_eq!(
+            super::format_upload_attachment_markdown(
+                "image/png",
+                "https://relay.test/media/a.png",
+                "shot.png"
+            ),
+            "\n![image](https://relay.test/media/a.png)"
+        );
+        assert_eq!(
+            super::format_upload_attachment_markdown(
+                "video/mp4",
+                "https://relay.test/media/a.mp4",
+                "clip.mp4"
+            ),
+            "\n![video](https://relay.test/media/a.mp4)"
+        );
+        assert_eq!(
+            super::format_upload_attachment_markdown(
+                "text/plain",
+                "https://relay.test/media/a.txt",
+                "a].txt"
+            ),
+            "\n[a\\].txt](https://relay.test/media/a.txt)"
+        );
+    }
+
+    #[tokio::test]
+    async fn cmd_send_message_emits_file_link_for_text_upload() {
+        // Production seam: a text/plain upload must land in content as
+        // `[filename](url)`, not `![image](url)`, and keep the original name
+        // on imeta. Reverting the send loop to always emit `![image]` fails this.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("notes.txt");
+        std::fs::write(&path, b"meeting notes").unwrap();
+
+        let (url, _, captured_event) = fake_send_relay("[]".to_string()).await;
+        let client = BuzzClient::new(url, Keys::generate(), None, None).unwrap();
+        let mut params = send_params("see notes");
+        params.files = vec![path.to_str().unwrap().to_string()];
+        cmd_send_message(&client, params).await.unwrap();
+
+        let event = captured_send_event(&captured_event);
+        let content = event["content"].as_str().expect("content string");
+        assert!(
+            content.contains("[notes.txt](https://relay.test/media/deadbeef.bin)"),
+            "text uploads must render as file links, got: {content}"
+        );
+        assert!(
+            !content.contains("![image]"),
+            "text uploads must not use image markdown, got: {content}"
+        );
+
+        let imeta = event_imeta_tags(&event);
+        assert_eq!(imeta.len(), 1, "one imeta tag for the upload");
+        assert!(
+            imeta[0].iter().any(|f| f == "filename notes.txt"),
+            "imeta must retain the original filename, got: {:?}",
+            imeta[0]
+        );
+        assert!(
+            imeta[0].iter().any(|f| f == "m text/plain"),
+            "imeta MIME must match the uploaded text file, got: {:?}",
+            imeta[0]
+        );
+    }
+
+    #[tokio::test]
+    async fn cmd_send_message_emits_file_link_for_octet_stream_upload() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("blob.bin");
+        std::fs::write(&path, b"untyped payload").unwrap();
+
+        let (url, _, captured_event) = fake_send_relay("[]".to_string()).await;
+        let client = BuzzClient::new(url, Keys::generate(), None, None).unwrap();
+        let mut params = send_params("see file");
+        params.files = vec![path.to_str().unwrap().to_string()];
+        cmd_send_message(&client, params).await.unwrap();
+
+        let event = captured_send_event(&captured_event);
+        let content = event["content"].as_str().expect("content string");
+        assert!(
+            content.contains("[blob.bin](https://relay.test/media/deadbeef.bin)"),
+            "octet-stream uploads must render as file links, got: {content}"
+        );
+        assert!(
+            !content.contains("![image]"),
+            "octet-stream uploads must not use image markdown, got: {content}"
         );
     }
 }
