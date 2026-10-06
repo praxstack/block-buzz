@@ -112,10 +112,7 @@ function assertHostPassesRemountKey(sourcePath, label) {
 
 test("AgentsView and UserProfilePersonaDialogs remount AgentDialog via the production key", () => {
   const here = path.dirname(fileURLToPath(import.meta.url));
-  assertHostPassesRemountKey(
-    path.join(here, "AgentsView.tsx"),
-    "AgentsView",
-  );
+  assertHostPassesRemountKey(path.join(here, "AgentsView.tsx"), "AgentsView");
   assertHostPassesRemountKey(
     path.join(here, "../../profile/ui/UserProfilePersonaDialogs.tsx"),
     "UserProfilePersonaDialogs",
