@@ -182,6 +182,12 @@ async fn query(
                             .thread_window_aux(&query, &mut budget.scan)
                             .await
                             .map_err(|e| database_error("auxiliary closure", e))?;
+                        // Cooperative page boundary after the production
+                        // `thread_window_aux` span closes. Two aux hops can
+                        // otherwise complete in one poll when both SQL
+                        // futures are Ready, which hides the mid-closure
+                        // access-mutation window from `/query` callers.
+                        tokio::task::yield_now().await;
                         if was_replica && !session.is_replica() {
                             events.truncate(row_count);
                             continue 'closure;

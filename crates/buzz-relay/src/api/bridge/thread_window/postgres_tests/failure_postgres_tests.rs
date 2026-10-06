@@ -8,7 +8,8 @@ use tracing::instrument::WithSubscriber;
 use tracing_subscriber::{layer::Context, prelude::*, registry::LookupSpan, Layer};
 
 // Pause the HTTP future after the first real auxiliary page completes. This
-// observes a production span rather than replacing the database or closure.
+// observes the production `thread_window_aux` span; `query` yields after
+// that span closes so a second hop cannot finish in the same poll.
 struct AuxPages(Arc<AtomicUsize>);
 impl<S> Layer<S> for AuxPages
 where

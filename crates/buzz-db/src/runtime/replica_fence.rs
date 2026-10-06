@@ -824,6 +824,27 @@ pub async fn run_probe(writer: PgPool, fence: Arc<ReplicaFence>) {
 mod postgres_tests {
     use super::*;
 
+    /// Production [`run_probe`] retries [`ProbeError::MaskedActivity`] on the
+    /// next tick: `pg_stat_activity` is cluster-global, so a connecting
+    /// backend in another postgres-ci worker fail-closes the sample. Tests
+    /// call [`probe_once`] directly and must retry that same error without
+    /// weakening the classification.
+    async fn probe_once_when_activity_is_visible(
+        writer: &PgPool,
+        fence: &ReplicaFence,
+    ) -> Result<TokenEntry, ProbeError> {
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            match probe_once(writer, fence).await {
+                Ok(entry) => return Ok(entry),
+                Err(ProbeError::MaskedActivity { .. }) if Instant::now() < deadline => {
+                    tokio::time::sleep(Duration::from_millis(20)).await;
+                }
+                Err(error) => return Err(error),
+            }
+        }
+    }
+
     /// A private scratch database with migrations applied: the probe tests
     /// mutate the singleton heartbeat row (rewind/rotate), which must never
     /// race the shared dev database or each other.
@@ -1194,8 +1215,12 @@ mod postgres_tests {
         let (admin, pool, name) = scratch_db().await;
         let fence = ReplicaFence::new();
 
-        let first = probe_once(&pool, &fence).await.expect("first probe");
-        let second = probe_once(&pool, &fence).await.expect("second probe");
+        let first = probe_once_when_activity_is_visible(&pool, &fence)
+            .await
+            .expect("first probe");
+        let second = probe_once_when_activity_is_visible(&pool, &fence)
+            .await
+            .expect("second probe");
         assert!(second.token > first.token, "tokens strictly increase");
         assert!(
             second.fence_wall >= first.fence_wall
@@ -1249,7 +1274,9 @@ mod postgres_tests {
         let (admin, pool, name) = scratch_db().await;
         let fence = ReplicaFence::new();
 
-        let before = probe_once(&pool, &fence).await.expect("probe");
+        let before = probe_once_when_activity_is_visible(&pool, &fence)
+            .await
+            .expect("probe");
         let mut conn = pool.acquire().await.expect("conn");
         let old_epoch = observe_heartbeat(&mut conn, false)
             .await
@@ -1263,7 +1290,9 @@ mod postgres_tests {
             .await
             .expect("rewind token");
 
-        let after = probe_once(&pool, &fence).await.expect("recovery probe");
+        let after = probe_once_when_activity_is_visible(&pool, &fence)
+            .await
+            .expect("recovery probe");
         // The pre-rewind observation must no longer prove anything.
         assert_eq!(
             fence.resolve(before.token, old_epoch),
