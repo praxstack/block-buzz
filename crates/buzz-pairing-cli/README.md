@@ -24,11 +24,22 @@ Both sides display a 6-digit SAS code. Confirm they match on each side, and the 
 Acts as the device holding the secret. Generates an ephemeral keypair and session secret, displays a `nostrpair://` QR URI, waits for a target to connect, performs SAS verification, and sends the payload.
 
 ```
-buzz-pair source --relay <RELAY_URL> [--nsec <BECH32_NSEC>]
+buzz-pair source --relay <RELAY_URL> [--nsec <BECH32_NSEC>] [--app-relay <HTTPS_ORIGIN>]
 ```
 
-- `--relay` — WebSocket relay URL (default: `wss://relay.damus.io`)
+- `--relay` — WebSocket relay URL for the pairing session (default: `wss://relay.damus.io`)
 - `--nsec` — bech32 nsec to transfer. If omitted, generates a throwaway test key.
+- `--app-relay` — HTTPS (or HTTP) origin Desktop stores as `relayUrl`. When set,
+  source sends Custom JSON `{relayUrl, pubkey, nsec}` so a Desktop target can
+  import the identity. Without this flag, the payload is a raw `nsec` for
+  CLI-to-CLI transfers.
+
+```bash
+# Pair into Desktop (Custom identity JSON)
+./target/release/buzz-pair source \
+  --relay ws://localhost:3000 \
+  --app-relay http://localhost:3000
+```
 
 ### `target`
 
