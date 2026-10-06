@@ -663,11 +663,9 @@ mod tests {
     fn app_relay_emits_desktop_custom_json() {
         let keys = Keys::generate();
         let nsec = keys.secret_key().to_bech32().expect("bech32 nsec");
-        let (payload, payload_type) = resolve_payload(
-            Some(nsec.clone()),
-            Some("https://community.example".into()),
-        )
-        .expect("resolve");
+        let (payload, payload_type) =
+            resolve_payload(Some(nsec.clone()), Some("https://community.example".into()))
+                .expect("resolve");
         assert_eq!(payload_type, PayloadType::Custom);
         let json: serde_json::Value = serde_json::from_str(&payload).expect("json");
         assert_eq!(json["relayUrl"], "https://community.example");
