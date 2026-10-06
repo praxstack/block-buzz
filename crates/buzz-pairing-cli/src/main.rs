@@ -3,7 +3,7 @@
 //! # Usage
 //!
 //! ```text
-//! buzz-pair source --relay wss://relay.example.com [--nsec nsec1...]
+//! buzz-pair source --relay wss://relay.example.com [--nsec nsec1...] [--app-relay https://community.example]
 //! buzz-pair target [--relay wss://relay.example.com]
 //! buzz-pair test-vectors
 //! ```
@@ -53,6 +53,10 @@ enum Cmd {
         /// nsec (bech32) of the key to transfer. If omitted, generates a test key.
         #[arg(long)]
         nsec: Option<String>,
+
+        /// HTTPS origin Desktop stores as `relayUrl` in Custom identity JSON.
+        #[arg(long)]
+        app_relay: Option<String>,
     },
 
     /// Act as the target device (scans QR code, receives the secret).
@@ -105,15 +109,23 @@ async fn main() {
 
 async fn run(cmd: Cmd) -> Result<(), CliError> {
     match cmd {
-        Cmd::Source { relay, nsec } => cmd_source(relay, nsec).await,
+        Cmd::Source {
+            relay,
+            nsec,
+            app_relay,
+        } => cmd_source(relay, nsec, app_relay).await,
         Cmd::Target { relay, show_secret } => cmd_target(relay, show_secret).await,
         Cmd::TestVectors => cmd_test_vectors(),
     }
 }
 
-async fn cmd_source(relay_url: String, nsec: Option<String>) -> Result<(), CliError> {
+async fn cmd_source(
+    relay_url: String,
+    nsec: Option<String>,
+    app_relay: Option<String>,
+) -> Result<(), CliError> {
     // Resolve the payload to transfer.
-    let (payload_str, payload_type) = resolve_payload(nsec)?;
+    let (payload_str, payload_type) = resolve_payload(nsec, app_relay)?;
 
     // Create pairing session.
     let (mut session, qr) = PairingSession::new_source(relay_url.clone());
@@ -576,14 +588,17 @@ fn parse_relay_event(text: &str, sub_id: &str) -> Option<Event> {
 
 /// Resolve the payload to send.
 ///
-/// If `nsec` is provided, parse it as bech32 and return the raw nsec string.
-/// Otherwise generate a fresh test key and return its nsec.
-fn resolve_payload(nsec: Option<String>) -> Result<(Zeroizing<String>, PayloadType), CliError> {
-    match nsec {
+/// Bare `--nsec` (or a generated test key) is `PayloadType::Nsec` for
+/// CLI-to-CLI transfers. `--app-relay` wraps the same key as Desktop Custom
+/// JSON `{relayUrl, pubkey, nsec}`.
+fn resolve_payload(
+    nsec: Option<String>,
+    app_relay: Option<String>,
+) -> Result<(Zeroizing<String>, PayloadType), CliError> {
+    let (nsec_str, keys) = match nsec {
         Some(s) => {
-            // Validate it parses as a secret key.
-            let _sk = SecretKey::parse(&s).map_err(|e| CliError::InvalidNsec(e.to_string()))?;
-            Ok((Zeroizing::new(s), PayloadType::Nsec))
+            let keys = Keys::parse(&s).map_err(|e| CliError::InvalidNsec(e.to_string()))?;
+            (s, keys)
         }
         None => {
             let keys = Keys::generate();
@@ -592,8 +607,26 @@ fn resolve_payload(nsec: Option<String>) -> Result<(Zeroizing<String>, PayloadTy
                 .to_bech32()
                 .map_err(|e| CliError::InvalidNsec(e.to_string()))?;
             println!("(no --nsec provided; using generated test key)");
-            Ok((Zeroizing::new(nsec_str), PayloadType::Nsec))
+            (nsec_str, keys)
         }
+    };
+
+    match app_relay {
+        Some(relay_url) => {
+            let relay_url = relay_url.trim();
+            if !(relay_url.starts_with("http://") || relay_url.starts_with("https://")) {
+                return Err(CliError::Other(
+                    "--app-relay must be an http(s) origin (Desktop relayUrl)".into(),
+                ));
+            }
+            let payload = serde_json::json!({
+                "relayUrl": relay_url,
+                "pubkey": keys.public_key().to_hex(),
+                "nsec": nsec_str,
+            });
+            Ok((Zeroizing::new(payload.to_string()), PayloadType::Custom))
+        }
+        None => Ok((Zeroizing::new(nsec_str), PayloadType::Nsec)),
     }
 }
 
@@ -620,4 +653,43 @@ fn hex_to_32(s: &str) -> Result<[u8; 32], CliError> {
     bytes
         .try_into()
         .map_err(|_| CliError::Other(format!("expected 32 bytes, got wrong length for '{s}'")))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn app_relay_emits_desktop_custom_json() {
+        let keys = Keys::generate();
+        let nsec = keys.secret_key().to_bech32().expect("bech32 nsec");
+        let (payload, payload_type) =
+            resolve_payload(Some(nsec.clone()), Some("https://community.example".into()))
+                .expect("resolve");
+        assert_eq!(payload_type, PayloadType::Custom);
+        let json: serde_json::Value = serde_json::from_str(&payload).expect("json");
+        assert_eq!(json["relayUrl"], "https://community.example");
+        assert_eq!(json["nsec"], nsec);
+        let pubkey = json["pubkey"].as_str().expect("pubkey");
+        assert_eq!(pubkey.len(), 64);
+        assert_eq!(pubkey, keys.public_key().to_hex());
+    }
+
+    #[test]
+    fn bare_nsec_stays_payload_type_nsec() {
+        let keys = Keys::generate();
+        let nsec = keys.secret_key().to_bech32().expect("bech32 nsec");
+        let (payload, payload_type) = resolve_payload(Some(nsec.clone()), None).expect("resolve");
+        assert_eq!(payload_type, PayloadType::Nsec);
+        assert_eq!(payload.as_str(), nsec);
+    }
+
+    #[test]
+    fn non_http_app_relay_is_an_error() {
+        let keys = Keys::generate();
+        let nsec = keys.secret_key().to_bech32().expect("bech32 nsec");
+        let err = resolve_payload(Some(nsec), Some("wss://relay.example".into()))
+            .expect_err("must reject non-http origin");
+        assert!(err.to_string().contains("--app-relay"));
+    }
 }
