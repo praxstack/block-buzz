@@ -22,6 +22,7 @@ import { TeamsSection } from "./TeamsSection";
 import { UnifiedAgentsSection } from "./UnifiedAgentsSection";
 import { useManagedAgentActions } from "./useManagedAgentActions";
 import { usePersonaActions } from "./usePersonaActions";
+import { personaDialogRemountKey } from "./personaDialogState";
 import { useTeamActions } from "./useTeamActions";
 import { useProfilePanel } from "@/shared/context/ProfilePanelContext";
 import { useBakedBuildEnvQuery } from "@/features/agents/hooks";
@@ -327,6 +328,9 @@ export function AgentsView() {
       ) : null}
       {personas.personaDialogState ? (
         <AgentDialog
+          key={personaDialogRemountKey(
+            personas.personaDialogState.initialValues,
+          )}
           description={personas.personaDialogState.description}
           error={
             personas.updatePersonaMutation.error instanceof Error
