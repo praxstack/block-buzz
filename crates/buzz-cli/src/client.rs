@@ -2436,7 +2436,7 @@ mod retry_policy_tests {
 mod tests {
     use super::{
         advance_query_cursor, create_response_with_id_if_accepted, extract_relay_response_field,
-        fallback_upload_mime, normalize_events, ALLOWED_MIMES, BuzzClient,
+        fallback_upload_mime, normalize_events, BuzzClient, ALLOWED_MIMES,
     };
     use nostr::{EventBuilder, Keys, Kind, Tag};
 
