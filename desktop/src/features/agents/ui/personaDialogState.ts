@@ -61,6 +61,8 @@ export function duplicatePersonaDialogState(
     description:
       "Create a new agent by copying this profile and adjusting it as needed.",
     submitLabel: "Create agent",
+    // Create payload only. Copying `id` would make submit update the source
+    // persona (the original then appears renamed or gone).
     initialValues: {
       displayName: `${persona.displayName} copy`,
       avatarUrl: persona.avatarUrl ?? "",
@@ -80,6 +82,16 @@ export function duplicatePersonaDialogState(
       ...behaviorEntry(persona),
     },
   };
+}
+
+/** Remount key so Duplicate cannot reuse an in-memory Edit form that captured `id`. */
+export function personaDialogRemountKey(
+  initialValues: CreatePersonaInput | UpdatePersonaInput | null,
+): string {
+  if (initialValues && "id" in initialValues) {
+    return `edit:${initialValues.id}`;
+  }
+  return "create";
 }
 
 /**

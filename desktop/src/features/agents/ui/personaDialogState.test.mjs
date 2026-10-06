@@ -8,6 +8,7 @@ import {
   editPersonaDialogState,
   formatPersonaNamePoolText,
   parsePersonaNamePoolText,
+  personaDialogRemountKey,
 } from "./personaDialogState.ts";
 
 test("canSubmitPersonaDialog requires a display name but not a system prompt", () => {
@@ -100,6 +101,8 @@ test("duplicatePersonaDialogState copies persona fields into a new draft", () =>
     namePool: [],
     envVars: {},
   });
+  assert.equal("id" in state.initialValues, false);
+  assert.equal(personaDialogRemountKey(state.initialValues), "create");
 });
 
 test("duplicatePersonaDialogState carries envVars and namePool into the duplicate", () => {
@@ -183,6 +186,7 @@ test("editPersonaDialogState seeds envVars and namePool from the persona", () =>
     ANTHROPIC_API_KEY: "sk-test",
   });
   assert.deepEqual(state.initialValues.namePool, ["alice", "bob"]);
+  assert.equal(personaDialogRemountKey(state.initialValues), "edit:persona-3");
 });
 
 test("editPersonaDialogState preserves provider=databricks", () => {

@@ -10,7 +10,10 @@ import type {
 import { AgentCardMintDialog } from "@/features/agents/ui/AgentCardMintDialog";
 import { PersonaDeleteDialog } from "@/features/agents/ui/PersonaDeleteDialog";
 import { AgentDialog } from "@/features/agents/ui/AgentDialog";
-import type { PersonaDialogState } from "@/features/agents/ui/personaDialogState";
+import {
+  personaDialogRemountKey,
+  type PersonaDialogState,
+} from "@/features/agents/ui/personaDialogState";
 import { UserProfileSnapshotExportDialog } from "@/features/profile/ui/UserProfileSnapshotExportDialog";
 
 /** Agent selected for card minting. */
@@ -96,6 +99,9 @@ export function UserProfilePersonaDialogs({
   return (
     <>
       <AgentDialog
+        key={personaDialogRemountKey(
+          personaDialogState?.initialValues ?? null,
+        )}
         description={personaDialogState?.description ?? ""}
         error={updateError ?? createError}
         initialValues={personaDialogState?.initialValues ?? null}
