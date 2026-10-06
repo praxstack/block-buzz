@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  mentionRankLabel,
   pickDefaultAgentCandidate,
   rankMentionCandidates,
 } from "./mentionRanking.ts";
@@ -112,6 +113,37 @@ test("rankMentionCandidates: whitespace displayName does not hide personaName pr
   });
 
   assert.deepEqual(rankedPubkeys([vera], "ver"), [CHANNEL_BRAIN_PUBKEY]);
+});
+
+test("rankMentionCandidates: prefix matches only the resolved fallback label", () => {
+  // displayName / personaName / secondaryLabel must not match. Removing
+  // `label` from labelScores drops this candidate; pubkey hex cannot
+  // match an npub-shaped query.
+  const unnamed = candidate({
+    displayName: "   ",
+    personaName: null,
+    secondaryLabel: null,
+    isAgent: true,
+    isMember: true,
+    pubkey: CHANNEL_BRAIN_PUBKEY,
+  });
+  const named = candidate({
+    displayName: "Brain",
+    isAgent: true,
+    isMember: true,
+    pubkey: OTHER_BRAIN_PUBKEY,
+  });
+  const resolved = mentionRankLabel(unnamed);
+  const query = resolved.slice(0, 4);
+
+  assert.match(query, /^npub$/i);
+
+  const ranked = rankMentionCandidates([named, unnamed], query);
+  assert.deepEqual(
+    ranked.map((item) => item.candidate.pubkey),
+    [CHANNEL_BRAIN_PUBKEY],
+  );
+  assert.equal(ranked[0]?.label, resolved);
 });
 
 test("rankMentionCandidates: matching secondary labels participate in ranking", () => {
