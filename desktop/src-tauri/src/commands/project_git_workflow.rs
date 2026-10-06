@@ -538,7 +538,7 @@ pub async fn merge_project_pull_request(
         &pull_request_author,
     )?;
     let auth = build_git_auth_config_for_keys(&owner_identity.keys)?
-        .with_auth_tag(owner_identity.auth_tag);
+        .with_auth_tag(owner_identity.auth_tag.clone());
 
     let git_result = tauri::async_runtime::spawn_blocking(
         move || -> Result<ProjectRepoMergeGitResult, ProjectPullRequestMergeError> {
@@ -682,10 +682,16 @@ mod tests {
     #[test]
     fn merge_git_auth_forwards_owner_auth_tag() {
         let src = include_str!("project_git_workflow.rs");
-        let needle = format!("{}{}", ".with_auth_tag(owner_identity", ".auth_tag)");
+        let git_auth_needle =
+            format!("{}{}", ".with_auth_tag(owner_identity", ".auth_tag.clone())");
+        let status_auth_needle = format!("{}{}", "owner_identity", ".auth_tag.as_deref()");
         assert!(
-            src.contains(&needle),
-            "merge git auth must forward the project owner auth tag"
+            src.contains(&git_auth_needle),
+            "merge git auth must clone the project owner auth tag before the blocking git task"
+        );
+        assert!(
+            src.contains(&status_auth_needle),
+            "merged status publish must still use the project owner auth tag"
         );
     }
 
