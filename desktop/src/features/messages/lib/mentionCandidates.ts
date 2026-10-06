@@ -53,7 +53,8 @@ export type MentionCandidate = {
 
 export function mentionCandidateLabel(candidate: MentionCandidate) {
   return (
-    candidate.displayName ??
+    candidate.displayName?.trim() ||
+    candidate.personaName?.trim() ||
     (candidate.pubkey ? truncateNpub(candidate.pubkey) : "agent")
   );
 }
