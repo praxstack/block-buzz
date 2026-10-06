@@ -67,7 +67,28 @@ const ALLOWED_MIMES: &[&str] = &[
     "image/gif",
     "image/webp",
     "video/mp4",
+    "application/octet-stream",
+    "application/json",
+    "text/plain",
+    "text/markdown",
+    "text/csv",
+    "text/html",
 ];
+
+fn fallback_upload_mime(path: &str) -> &'static str {
+    let ext = std::path::Path::new(path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|s| s.to_ascii_lowercase());
+    match ext.as_deref() {
+        Some("txt") => "text/plain",
+        Some("md" | "markdown") => "text/markdown",
+        Some("csv") => "text/csv",
+        Some("json") => "application/json",
+        Some("html" | "htm") => "text/html",
+        _ => "application/octet-stream",
+    }
+}
 
 /// Maximum file size for image uploads (50 MB).
 const MAX_IMAGE_BYTES: u64 = 50 * 1024 * 1024;
@@ -1218,7 +1239,7 @@ impl BuzzClient {
         // 2. Detect MIME from magic bytes
         let mime = infer::get(&bytes)
             .map(|t| t.mime_type().to_string())
-            .unwrap_or_else(|| "application/octet-stream".to_string());
+            .unwrap_or_else(|| fallback_upload_mime(file_path).to_string());
 
         if !ALLOWED_MIMES.contains(&mime.as_str()) {
             return Err(CliError::Usage(format!("unsupported file type: {mime}")));
@@ -2415,9 +2436,38 @@ mod retry_policy_tests {
 mod tests {
     use super::{
         advance_query_cursor, create_response_with_id_if_accepted, extract_relay_response_field,
-        normalize_events, BuzzClient,
+        fallback_upload_mime, normalize_events, ALLOWED_MIMES, BuzzClient,
     };
     use nostr::{EventBuilder, Keys, Kind, Tag};
+
+    #[test]
+    fn allowed_upload_mimes_include_text_and_octet_stream() {
+        for mime in [
+            "application/octet-stream",
+            "text/plain",
+            "text/markdown",
+            "text/csv",
+            "application/json",
+            "text/html",
+            "image/png",
+        ] {
+            assert!(
+                ALLOWED_MIMES.contains(&mime),
+                "{mime} must be accepted for CLI upload"
+            );
+        }
+        assert!(!ALLOWED_MIMES.contains(&"application/x-msdownload"));
+    }
+
+    #[test]
+    fn unsniffable_upload_paths_use_extension_or_octet_stream() {
+        assert_eq!(fallback_upload_mime("notes.txt"), "text/plain");
+        assert_eq!(fallback_upload_mime("README.MD"), "text/markdown");
+        assert_eq!(fallback_upload_mime("rows.csv"), "text/csv");
+        assert_eq!(fallback_upload_mime("data.json"), "application/json");
+        assert_eq!(fallback_upload_mime("page.html"), "text/html");
+        assert_eq!(fallback_upload_mime("blob.bin"), "application/octet-stream");
+    }
 
     #[test]
     fn normalize_events_preserves_the_complete_signed_event_shape() {
