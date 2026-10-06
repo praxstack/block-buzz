@@ -682,8 +682,10 @@ mod tests {
     #[test]
     fn merge_git_auth_forwards_owner_auth_tag() {
         let src = include_str!("project_git_workflow.rs");
-        let git_auth_needle =
-            format!("{}{}", ".with_auth_tag(owner_identity", ".auth_tag.clone())");
+        let git_auth_needle = format!(
+            "{}{}",
+            ".with_auth_tag(owner_identity", ".auth_tag.clone())"
+        );
         let status_auth_needle = format!("{}{}", "owner_identity", ".auth_tag.as_deref()");
         assert!(
             src.contains(&git_auth_needle),
