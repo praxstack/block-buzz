@@ -19,7 +19,7 @@ import {
   sendDesktopNotification,
 } from "./lib/desktop";
 import {
-  playNotificationSound,
+  playAlertSoundIfEnabled,
   resolveSlotSound,
   shouldPlayNotificationSound,
   slotForFeedKind,
@@ -123,7 +123,7 @@ export function useFeedDesktopNotifications(
         shouldPlayNotificationSound(item.channelId, silentChannelIds)
       ) {
         const slot = slotForFeedKind(item.kind, item.category);
-        playNotificationSound(resolveSlotSound(settings, slot));
+        playAlertSoundIfEnabled(settings, resolveSlotSound(settings, slot));
       }
     },
   );

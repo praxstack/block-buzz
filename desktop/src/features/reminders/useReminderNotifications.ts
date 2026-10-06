@@ -19,7 +19,7 @@ import {
   truncateNotificationBody,
 } from "@/features/notifications/lib/notificationFormat";
 import {
-  playNotificationSound,
+  playAlertSoundIfEnabled,
   resolveSlotSound,
 } from "@/features/notifications/lib/sound";
 
@@ -110,7 +110,10 @@ export function useReminderNotifications(
       body,
     }).then((didSend) => {
       if (!didSend) return;
-      playNotificationSound(resolveSlotSound(current, "needs_action"));
+      playAlertSoundIfEnabled(
+        current,
+        resolveSlotSound(current, "needs_action"),
+      );
       void requestDockBounce();
     });
   });

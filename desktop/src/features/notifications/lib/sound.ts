@@ -91,7 +91,7 @@ export const DEFAULT_SLOT_SOUNDS: SlotSounds = {
   job_error: "flutter",
 };
 
-/** Per-event alerts (notification + sound) on/off. */
+/** Per-event visual alerts (and whether that slot may play a sound). */
 export const DEFAULT_SLOT_ALERTS_ENABLED: Record<SoundSlot, boolean> = {
   dm: true,
   mention: true,
@@ -182,4 +182,20 @@ export function playNotificationSound(
     // Best-effort only.
     return null;
   }
+}
+
+/**
+ * Play an alert sound only when the user has Sound enabled.
+ *
+ * Preview pickers must call `playNotificationSound` directly so turning
+ * Sound off does not mute the sample.
+ */
+export function playAlertSoundIfEnabled(
+  settings: { soundEnabled: boolean },
+  name: SoundName,
+): HTMLAudioElement | null {
+  if (!settings.soundEnabled) {
+    return null;
+  }
+  return playNotificationSound(name);
 }
