@@ -53,7 +53,9 @@ function scoreMentionCandidateLabel(
 }
 
 /** Label the picker shows — ranking must score this, not a stale empty name. */
-export function mentionRankLabel(candidate: MentionCandidateForRanking): string {
+export function mentionRankLabel(
+  candidate: MentionCandidateForRanking,
+): string {
   return (
     candidate.displayName?.trim() ||
     candidate.personaName?.trim() ||

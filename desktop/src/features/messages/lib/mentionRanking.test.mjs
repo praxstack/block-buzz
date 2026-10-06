@@ -99,10 +99,7 @@ test("rankMentionCandidates: prefix matches personaName when displayName is null
   });
 
   assert.deepEqual(rankedPubkeys([other, vera], "v"), [CHANNEL_BRAIN_PUBKEY]);
-  assert.equal(
-    rankMentionCandidates([vera], "v")[0]?.label,
-    "Vera",
-  );
+  assert.equal(rankMentionCandidates([vera], "v")[0]?.label, "Vera");
 });
 
 test("rankMentionCandidates: whitespace displayName does not hide personaName prefix", () => {
