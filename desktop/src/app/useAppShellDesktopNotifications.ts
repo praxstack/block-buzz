@@ -17,7 +17,7 @@ import {
 import { formatMessageNotification } from "@/features/notifications/lib/notificationFormat";
 import { buildEventNotificationTarget } from "@/features/notifications/lib/target";
 import {
-  playNotificationSound,
+  playAlertSoundIfEnabled,
   resolveSlotSound,
   shouldPlayNotificationSound,
 } from "@/features/notifications/lib/sound";
@@ -95,7 +95,10 @@ export function useAppShellDesktopNotifications({
       }).then((didSend) => {
         if (!didSend) return;
         if (shouldPlayNotificationSound(channel.id, silentChannelIds)) {
-          playNotificationSound(resolveSlotSound(notificationSettings, "dm"));
+          playAlertSoundIfEnabled(
+            notificationSettings,
+            resolveSlotSound(notificationSettings, "dm"),
+          );
         }
         void requestDockBounce();
       });
@@ -138,7 +141,8 @@ export function useAppShellDesktopNotifications({
       }).then((didSend) => {
         if (!didSend) return;
         if (shouldPlayNotificationSound(channelId, silentChannelIds)) {
-          playNotificationSound(
+          playAlertSoundIfEnabled(
+            notificationSettings,
             resolveSlotSound(notificationSettings, "thread_reply"),
           );
         }
