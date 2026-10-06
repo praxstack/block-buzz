@@ -63,7 +63,10 @@ function repositoryBelongsOnProjectHome(
   );
 }
 
-function isOwnerSlugIdentity(project: Project, repository: Repository): boolean {
+function isOwnerSlugIdentity(
+  project: Project,
+  repository: Repository,
+): boolean {
   return (
     repository.owner.toLowerCase() === project.owner.toLowerCase() &&
     repository.dtag === project.dtag
