@@ -99,9 +99,7 @@ export function UserProfilePersonaDialogs({
   return (
     <>
       <AgentDialog
-        key={personaDialogRemountKey(
-          personaDialogState?.initialValues ?? null,
-        )}
+        key={personaDialogRemountKey(personaDialogState?.initialValues ?? null)}
         description={personaDialogState?.description ?? ""}
         error={updateError ?? createError}
         initialValues={personaDialogState?.initialValues ?? null}
