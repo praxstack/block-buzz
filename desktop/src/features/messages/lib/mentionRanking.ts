@@ -52,6 +52,17 @@ function scoreMentionCandidateLabel(
   return null;
 }
 
+/** Label the picker shows — ranking must score this, not a stale empty name. */
+export function mentionRankLabel(
+  candidate: MentionCandidateForRanking,
+): string {
+  return (
+    candidate.displayName?.trim() ||
+    candidate.personaName?.trim() ||
+    (candidate.pubkey ? truncateNpub(candidate.pubkey) : "agent")
+  );
+}
+
 export function pickDefaultAgentCandidate<T extends MentionCandidateForRanking>(
   candidates: readonly T[],
   activePersonaIds: ReadonlySet<string> = new Set(),
@@ -116,9 +127,7 @@ export function rankMentionCandidates<T extends MentionCandidateForRanking>(
       const pubkeyLower = candidate.pubkey
         ? normalizePubkey(candidate.pubkey)
         : "";
-      const label =
-        candidate.displayName ??
-        (candidate.pubkey ? truncateNpub(candidate.pubkey) : "agent");
+      const label = mentionRankLabel(candidate);
       const groupRank = getMentionCandidateGroupRank(
         candidate,
         activePersonaIds,
@@ -128,10 +137,14 @@ export function rankMentionCandidates<T extends MentionCandidateForRanking>(
         candidate.displayName,
         candidate.personaName,
         candidate.secondaryLabel,
+        label,
       ]
-        .map((value) =>
-          value ? scoreMentionCandidateLabel(value, lowerQuery) : null,
-        )
+        .map((value) => {
+          const trimmed = value?.trim();
+          return trimmed
+            ? scoreMentionCandidateLabel(trimmed, lowerQuery)
+            : null;
+        })
         .filter((score): score is number => score !== null);
       const labelScore =
         labelScores.length > 0 ? Math.min(...labelScores) : null;
