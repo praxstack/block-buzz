@@ -1726,7 +1726,7 @@ mod retry_policy_tests {
     use axum::body::Body;
     use axum::extract::State;
     use axum::http::{HeaderMap, Response, StatusCode};
-    use axum::routing::post;
+    use axum::routing::{post, put};
     use axum::Router;
     use nostr::{EventBuilder, Keys, Kind};
     use tokio::net::TcpListener;
@@ -2334,6 +2334,76 @@ mod retry_policy_tests {
         assert!(
             auths.iter().all(|a| a.contains("Nostr ")),
             "each attempt must carry Nostr auth"
+        );
+    }
+
+    /// Drive production `upload_file` and return the `Content-Type` header it sent.
+    /// Reverting `upload_file` off `fallback_upload_mime` must fail the callers.
+    async fn content_type_sent_by_upload_file(file_path: &str) -> String {
+        let captured: Arc<std::sync::Mutex<Option<String>>> = Arc::new(std::sync::Mutex::new(None));
+        let state = captured.clone();
+
+        let app = Router::new()
+            .route(
+                "/upload",
+                put(
+                    |State(cap): State<Arc<std::sync::Mutex<Option<String>>>>,
+                     headers: HeaderMap,
+                     _body: axum::body::Bytes| async move {
+                        let ct = headers
+                            .get(axum::http::header::CONTENT_TYPE)
+                            .and_then(|v| v.to_str().ok())
+                            .unwrap_or("")
+                            .to_string();
+                        *cap.lock().unwrap() = Some(ct);
+                        (
+                            StatusCode::OK,
+                            [("content-type", "application/json")],
+                            r#"{"url":"https://relay.test/media/aabb.bin","sha256":"aa","size":1,"type":"application/octet-stream","uploaded":0}"#.to_string(),
+                        )
+                    },
+                ),
+            )
+            .with_state(state);
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr: SocketAddr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+
+        let client = test_client(&format!("http://{addr}"));
+        client
+            .upload_file(file_path)
+            .await
+            .expect("upload_file must succeed for an allowed MIME");
+        let content_type = captured
+            .lock()
+            .unwrap()
+            .clone()
+            .expect("upload_file must send Content-Type");
+        content_type
+    }
+
+    #[tokio::test]
+    async fn upload_file_sends_text_plain_content_type_for_txt() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("notes.txt");
+        std::fs::write(&path, b"meeting notes without a magic signature").unwrap();
+        let content_type = content_type_sent_by_upload_file(path.to_str().unwrap()).await;
+        assert_eq!(
+            content_type, "text/plain",
+            "unsniffable .txt must use fallback_upload_mime via upload_file"
+        );
+    }
+
+    #[tokio::test]
+    async fn upload_file_sends_octet_stream_content_type_for_unknown_extension() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("payload.unknownext");
+        std::fs::write(&path, b"untyped payload without a magic signature").unwrap();
+        let content_type = content_type_sent_by_upload_file(path.to_str().unwrap()).await;
+        assert_eq!(
+            content_type, "application/octet-stream",
+            "unknown extensions must fall back to octet-stream via upload_file"
         );
     }
 
