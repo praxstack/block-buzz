@@ -154,3 +154,15 @@ test("homeRepositoriesToBind ignores repos already on the signed project", () =>
   });
   assert.equal(homeRepositoriesToBind(project, [repo.repoAddress]).length, 0);
 });
+
+test("homeRepositoriesToBind does not rebind an unsigned owner-slug repo", () => {
+  const repo = standaloneRepo({
+    owner: OWNER,
+    repository: { owner: OWNER, maintainers: [OWNER] },
+  });
+  const project = explicitProject({
+    repositories: [repo.repositories[0]],
+    repositoryAddresses: [repo.projectAddress],
+  });
+  assert.deepEqual(homeRepositoriesToBind(project, []), []);
+});
