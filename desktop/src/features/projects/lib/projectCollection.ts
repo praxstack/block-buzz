@@ -63,6 +63,13 @@ function repositoryBelongsOnProjectHome(
   );
 }
 
+function isOwnerSlugIdentity(project: Project, repository: Repository): boolean {
+  return (
+    repository.owner.toLowerCase() === project.owner.toLowerCase() &&
+    repository.dtag === project.dtag
+  );
+}
+
 /**
  * Repositories already shown on the project (after absorb) that are not yet
  * on the signed `kind:30621` `a` tag set. The owner should bind them so
@@ -76,7 +83,10 @@ export function homeRepositoriesToBind(
   return project.repositories.filter(
     (repository) =>
       !signed.has(repository.repoAddress) &&
-      repositoryBelongsOnProjectHome(project, repository),
+      repositoryBelongsOnProjectHome(project, repository) &&
+      // Honor `projects remove-repo` on the slug-identity repo. Absorb may
+      // still show it on the card; heal must not republish the `a` tag.
+      !isOwnerSlugIdentity(project, repository),
   );
 }
 
